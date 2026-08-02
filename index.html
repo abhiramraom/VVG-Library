@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Personal Library Management System</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
+    h1, h2 { color: #333; }
+    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+    input, select, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
+    button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
+    button:hover { background-color: #218838; }
+    #searchBox { padding: 10px; font-size: 16px; margin-bottom: 15px; }
+    table { width: 100%; border-collapse: collapse; background: white; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+    th { background-color: #007bff; color: white; }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+  </style>
+</head>
+<body>
+
+  <h1>📚 Library Management System</h1>
+
+  <!-- ADD BOOK FORM -->
+  <div class="card">
+    <h2>Add New Book</h2>
+    <form id="addBookForm">
+      <div class="form-grid">
+        <input type="text" id="slNo" placeholder="SI. No" required>
+        <input type="text" id="title" placeholder="Title" required>
+        <input type="text" id="subTitle" placeholder="Sub-title">
+        <input type="text" id="author" placeholder="Author & CoAuthor">
+        <input type="text" id="editor" placeholder="Editor & Co-Editor">
+        <input type="text" id="commentaryAuthor" placeholder="Author of Commentary">
+        <input type="text" id="lang" placeholder="Language">
+        <input type="text" id="vol" placeholder="Vol (IF)">
+        <input type="text" id="publisher" placeholder="Publisher">
+        <input type="text" id="year" placeholder="Year of Print">
+        <input type="text" id="isbn" placeholder="ISBN or ISSN">
+        <input type="text" id="topic" placeholder="Topic">
+        <input type="text" id="subject" placeholder="Subject">
+        
+        <!-- CONDITION DROPDOWN MENU -->
+        <select id="condition" required>
+          <option value="" disabled selected>Select Condition...</option>
+          <option value="A">A (Excellent/New)</option>
+          <option value="B">B (Good/Used)</option>
+          <option value="C">C (Fair/Poor)</option>
+        </select>
+      </div>
+      <br>
+      <button type="submit">Add Book to Library</button>
+    </form>
+  </div>
+
+  <!-- SEARCH & BOOKS TABLE -->
+  <div class="card">
+    <h2>Book Catalogue</h2>
+    <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, Condition, etc...">
+    <div style="overflow-x:auto;">
+      <table id="booksTable">
+        <thead>
+          <tr id="tableHead"></tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBmRremqPD39daJC5YFah-x5SsotoQxv9EZDHWsvmAoht7KDjI9HqV_BVM1nTHnLXq/exec';
+
+    // Load Books on Page Load
+    window.onload = fetchBooks;
+
+    function fetchBooks() {
+      fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+          const head = document.getElementById('tableHead');
+          const body = document.getElementById('tableBody');
+          head.innerHTML = '';
+          body.innerHTML = '';
+
+          if (data.length > 0) {
+            // Set Headers
+            data[0].forEach(col => {
+              head.innerHTML += `<th>${col}</th>`;
+            });
+
+            // Set Data Rows
+            for (let i = 1; i < data.length; i++) {
+              let rowHtml = '<tr>';
+              data[i].forEach(cell => {
+                rowHtml += `<td>${cell}</td>`;
+              });
+              rowHtml += '</tr>';
+              body.innerHTML += rowHtml;
+            }
+          }
+        });
+    }
+
+    // Add Book Event
+    document.getElementById('addBookForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      
+      const payload = {
+        slNo: document.getElementById('slNo').value,
+        title: document.getElementById('title').value,
+        subTitle: document.getElementById('subTitle').value,
+        author: document.getElementById('author').value,
+        editor: document.getElementById('editor').value,
+        commentaryAuthor: document.getElementById('commentaryAuthor').value,
+        lang: document.getElementById('lang').value,
+        vol: document.getElementById('vol').value,
+        publisher: document.getElementById('publisher').value,
+        year: document.getElementById('year').value,
+        isbn: document.getElementById('isbn').value,
+        topic: document.getElementById('topic').value,
+        subject: document.getElementById('subject').value,
+        condition: document.getElementById('condition').value
+      };
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.json())
+      .then(res => {
+        alert('Book added successfully!');
+        document.getElementById('addBookForm').reset();
+        fetchBooks();
+      });
+    });
+
+    // Real-Time Search Function
+    function searchBooks() {
+      const input = document.getElementById('searchBox').value.toLowerCase();
+      const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+
+      for (let i = 0; i < rows.length; i++) {
+        const text = rows[i].textContent.toLowerCase();
+        rows[i].style.display = text.includes(input) ? '' : 'none';
+      }
+    }
+  </script>
+</body>
+</html>
