@@ -30,7 +30,9 @@
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; vertical-align: middle; }
     th { background-color: #007bff; color: white; }
     tr:nth-child(even) { background-color: #f9f9f9; }
-    .admin-only { display: none; }
+    
+    /* Disabled Sl. No style */
+    input:disabled { background-color: #e9ecef; cursor: not-allowed; }
   </style>
 </head>
 <body>
@@ -38,18 +40,19 @@
   <div class="header-bar">
     <h1>📚 Library Management System</h1>
     <div>
+      <span id="roleBadge" style="margin-right: 10px; font-weight: bold; color: #555;">Role: Standard User</span>
       <button id="adminLoginBtn" class="btn-admin" onclick="toggleAdminLogin()">🔐 Admin Login</button>
       <button id="adminLogoutBtn" class="btn-logout" onclick="logoutAdmin()" style="display:none;">🔒 Logout Admin</button>
     </div>
   </div>
 
-  <!-- ADD / EDIT BOOK FORM (ADMIN ONLY) -->
-  <div class="card admin-only" id="adminFormCard">
-    <h2 id="formTitle">Add New Book</h2>
+  <!-- BOOK SUBMISSION / EDIT FORM (AVAILABLE TO ALL USERS FOR ADDING) -->
+  <div class="card" id="bookFormCard">
+    <h2 id="formTitle">Add New Book Entry</h2>
     <form id="addBookForm">
       <input type="hidden" id="editRowIndex" value="">
       <div class="form-grid">
-        <input type="text" id="slNo" placeholder="SI. No" required>
+        <input type="text" id="slNo" placeholder="Sl. No (Auto-generated)" disabled>
         <input type="text" id="title" placeholder="Title (Original)" required>
         <input type="text" id="titleEng" placeholder="Title (English)">
         <input type="text" id="subTitle" placeholder="Sub-title">
@@ -86,7 +89,7 @@
   <!-- SEARCH & BOOKS TABLE -->
   <div class="card">
     <h2>Book Catalogue</h2>
-    <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title (Original or English), Author, Commentary, Subject, etc...">
+    <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, etc...">
     <div style="overflow-x:auto;">
       <table id="booksTable">
         <thead>
@@ -99,8 +102,7 @@
 
   <script>
     const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
-    const ADMIN_PASSWORD = 'admin123';
-    let isAdmin = false;
+    let adminToken = null; // Secret session token returned by server upon login
     let globalData = [];
 
     window.onload = function() {
@@ -109,25 +111,35 @@
     };
 
     function toggleAdminLogin() {
-      const pwd = prompt("admin123");
-      if (pwd === ADMIN_PASSWORD) {
-        isAdmin = true;
-        alert("Admin mode active!");
-        updateAdminUI();
-      } else if (pwd !== null) {
-        alert("Incorrect Password!");
-      }
+      const pwd = prompt("ADMINVVGLIB");
+      if (!pwd) return;
+
+      // Verify password via backend
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'login', password: pwd })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          adminToken = res.token;
+          alert("Admin mode activated!");
+          updateAdminUI(true);
+        } else {
+          alert("Incorrect Password!");
+        }
+      });
     }
 
     function logoutAdmin() {
-      isAdmin = false;
+      adminToken = null;
       alert("Logged out of Admin mode.");
-      updateAdminUI();
+      updateAdminUI(false);
+      resetForm();
     }
 
-    function updateAdminUI() {
-      const adminElements = document.querySelectorAll('.admin-only');
-      adminElements.forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+    function updateAdminUI(isAdmin) {
+      document.getElementById('roleBadge').innerText = isAdmin ? 'Role: Administrator' : 'Role: Standard User';
       document.getElementById('adminLoginBtn').style.display = isAdmin ? 'none' : 'inline-block';
       document.getElementById('adminLogoutBtn').style.display = isAdmin ? 'inline-block' : 'none';
       fetchBooks();
@@ -171,7 +183,7 @@
 
           if (data.length > 0) {
             data[0].forEach(col => { head.innerHTML += `<th>${col}</th>`; });
-            if (isAdmin) { head.innerHTML += `<th>Actions</th>`; }
+            if (adminToken) { head.innerHTML += `<th>Actions</th>`; }
 
             for (let i = 1; i < data.length; i++) {
               let rowHtml = '<tr>';
@@ -179,7 +191,8 @@
                 rowHtml += `<td>${cell}</td>`;
               });
 
-              if (isAdmin) {
+              // Show Action controls ONLY if logged in as Admin
+              if (adminToken) {
                 rowHtml += `<td>
                   <button class="btn-edit" onclick="editBook(${i})">Edit</button>
                   <button class="btn-delete" onclick="deleteBook(${i + 1})">Delete</button>
@@ -196,8 +209,16 @@
       e.preventDefault();
       
       const editRowIndex = document.getElementById('editRowIndex').value;
+      
+      // If editing, require Admin token
+      if (editRowIndex && !adminToken) {
+        alert("Only administrators can edit entries.");
+        return;
+      }
+
       const payload = {
         action: editRowIndex ? "update" : "add",
+        adminToken: adminToken,
         rowIndex: editRowIndex ? parseInt(editRowIndex) + 1 : null,
         data: {
           slNo: document.getElementById('slNo').value,
@@ -220,14 +241,22 @@
 
       fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
       .then(res => res.json())
-      .then(() => {
-        alert(editRowIndex ? 'Book updated!' : 'Book added!');
-        resetForm();
-        fetchBooks();
+      .then(res => {
+        if(res.success) {
+          alert(editRowIndex ? 'Book updated!' : 'Book added successfully!');
+          resetForm();
+          fetchBooks();
+        } else {
+          alert("Error: " + res.message);
+        }
       });
     });
 
     function editBook(index) {
+      if (!adminToken) {
+        alert("Unauthorized access.");
+        return;
+      }
       const row = globalData[index];
       document.getElementById('editRowIndex').value = index;
       document.getElementById('slNo').value = row[0] || '';
@@ -262,7 +291,7 @@
       document.getElementById('subject').value = row[13] || '';
       document.getElementById('condition').value = row[14] || '';
 
-      document.getElementById('formTitle').innerText = 'Edit Book Information';
+      document.getElementById('formTitle').innerText = 'Edit Book Information (Admin)';
       document.getElementById('submitBtn').innerText = 'Update Book Info';
       document.getElementById('cancelBtn').style.display = 'inline-block';
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -271,23 +300,32 @@
     function resetForm() {
       document.getElementById('addBookForm').reset();
       document.getElementById('editRowIndex').value = '';
+      document.getElementById('slNo').value = '';
       document.getElementById('commentaryContainer').innerHTML = '';
       addCommentaryRow();
-      document.getElementById('formTitle').innerText = 'Add New Book';
+      document.getElementById('formTitle').innerText = 'Add New Book Entry';
       document.getElementById('submitBtn').innerText = 'Add Book to Library';
       document.getElementById('cancelBtn').style.display = 'none';
     }
 
     function deleteBook(rowIndex) {
-      if (confirm('Are you sure you want to delete this book?')) {
+      if (!adminToken) {
+        alert("Unauthorized access.");
+        return;
+      }
+      if (confirm('Are you sure you want to delete this book entry?')) {
         fetch(SCRIPT_URL, {
           method: 'POST',
-          body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
+          body: JSON.stringify({ action: 'delete', adminToken: adminToken, rowIndex: rowIndex })
         })
         .then(res => res.json())
-        .then(() => {
-          alert('Book deleted!');
-          fetchBooks();
+        .then(res => {
+          if (res.success) {
+            alert('Book deleted!');
+            fetchBooks();
+          } else {
+            alert('Error: ' + res.message);
+          }
         });
       }
     }
