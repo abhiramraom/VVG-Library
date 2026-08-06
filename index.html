@@ -31,7 +31,6 @@
     th { background-color: #007bff; color: white; }
     tr:nth-child(even) { background-color: #f9f9f9; }
     
-    /* Disabled Sl. No style */
     input:disabled { background-color: #e9ecef; cursor: not-allowed; }
   </style>
 </head>
@@ -46,7 +45,6 @@
     </div>
   </div>
 
-  <!-- BOOK SUBMISSION / EDIT FORM (AVAILABLE TO ALL USERS FOR ADDING) -->
   <div class="card" id="bookFormCard">
     <h2 id="formTitle">Add New Book Entry</h2>
     <form id="addBookForm">
@@ -73,7 +71,6 @@
           <option value="C">C</option>
         </select>
 
-        <!-- LINKED COMMENTARY SECTION -->
         <div class="commentary-box">
           <label><strong>Commentaries & Their Authors:</strong></label>
           <div id="commentaryContainer" style="margin-top: 8px;"></div>
@@ -86,7 +83,6 @@
     </form>
   </div>
 
-  <!-- SEARCH & BOOKS TABLE -->
   <div class="card">
     <h2>Book Catalogue</h2>
     <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, etc...">
@@ -101,8 +97,8 @@
   </div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBmRremqPD39daJC5YFah-x5SsotoQxv9EZDHWsvmAoht7KDjI9HqV_BVM1nTHnLXq/exec';
-    let adminToken = null; // Secret session token returned by server upon login
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbx9rLAT3KgecaL_dAJ1ixsi7T7zqMDxQv9euN4YQevSNZ6Z8f0HWPydg5pBdrwCagDZ/exec
+    let adminToken = null;
     let globalData = [];
 
     window.onload = function() {
@@ -111,10 +107,9 @@
     };
 
     function toggleAdminLogin() {
-      const pwd = prompt("ADMINVVGLIB");
+      const pwd = prompt("Enter Admin Password:");
       if (!pwd) return;
 
-      // Verify password via backend
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'login', password: pwd })
@@ -191,7 +186,6 @@
                 rowHtml += `<td>${cell}</td>`;
               });
 
-              // Show Action controls ONLY if logged in as Admin
               if (adminToken) {
                 rowHtml += `<td>
                   <button class="btn-edit" onclick="editBook(${i})">Edit</button>
@@ -209,8 +203,6 @@
       e.preventDefault();
       
       const editRowIndex = document.getElementById('editRowIndex').value;
-      
-      // If editing, require Admin token
       if (editRowIndex && !adminToken) {
         alert("Only administrators can edit entries.");
         return;
