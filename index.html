@@ -6,34 +6,55 @@
   <title>Personal Library Management System</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
-    h1, h2 { color: #333; }
+    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    h1, h2 { color: #333; margin: 0; }
     .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
     input, select, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
     button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
     button:hover { background-color: #218838; }
+    
+    .btn-admin { background-color: #007bff; width: auto; padding: 8px 16px; }
+    .btn-logout { background-color: #6c757d; width: auto; padding: 8px 16px; }
+    
+    .commentary-box { grid-column: 1 / -1; background: #eef2f7; padding: 12px; border-radius: 6px; border: 1px solid #d0d7de; }
+    .commentary-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+    .commentary-row input { flex: 1; }
+    .btn-remove { background: #dc3545; width: auto; padding: 6px 12px; }
+    .btn-add { background: #17a2b8; margin-top: 5px; width: auto; padding: 6px 12px; }
+    
+    .btn-edit { background-color: #ffc107; color: #000; padding: 4px 8px; margin-right: 5px; width: auto; }
+    .btn-delete { background-color: #dc3545; color: #fff; padding: 4px 8px; width: auto; }
     #searchBox { padding: 10px; font-size: 16px; margin-bottom: 15px; }
     table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; }
+    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; vertical-align: middle; }
     th { background-color: #007bff; color: white; }
     tr:nth-child(even) { background-color: #f9f9f9; }
+    .admin-only { display: none; }
   </style>
 </head>
 <body>
 
-  <h1>📚 Library Management System</h1>
+  <div class="header-bar">
+    <h1>📚 Library Management System</h1>
+    <div>
+      <button id="adminLoginBtn" class="btn-admin" onclick="toggleAdminLogin()">🔐 Admin Login</button>
+      <button id="adminLogoutBtn" class="btn-logout" onclick="logoutAdmin()" style="display:none;">🔒 Logout Admin</button>
+    </div>
+  </div>
 
-  <!-- ADD BOOK FORM -->
-  <div class="card">
-    <h2>Add New Book</h2>
+  <!-- ADD / EDIT BOOK FORM (ADMIN ONLY) -->
+  <div class="card admin-only" id="adminFormCard">
+    <h2 id="formTitle">Add New Book</h2>
     <form id="addBookForm">
+      <input type="hidden" id="editRowIndex" value="">
       <div class="form-grid">
         <input type="text" id="slNo" placeholder="SI. No" required>
-        <input type="text" id="title" placeholder="Title" required>
+        <input type="text" id="title" placeholder="Title (Original)" required>
+        <input type="text" id="titleEng" placeholder="Title (English)">
         <input type="text" id="subTitle" placeholder="Sub-title">
         <input type="text" id="author" placeholder="Author & CoAuthor">
         <input type="text" id="editor" placeholder="Editor & Co-Editor">
-        <input type="text" id="commentaryAuthor" placeholder="Author of Commentary">
         <input type="text" id="lang" placeholder="Language">
         <input type="text" id="vol" placeholder="Vol (IF)">
         <input type="text" id="publisher" placeholder="Publisher">
@@ -42,23 +63,30 @@
         <input type="text" id="topic" placeholder="Topic">
         <input type="text" id="subject" placeholder="Subject">
         
-        <!-- CONDITION DROPDOWN MENU -->
         <select id="condition" required>
           <option value="" disabled selected>Select Condition...</option>
-          <option value="A">A (Excellent/New)</option>
-          <option value="B">B (Good/Used)</option>
-          <option value="C">C (Fair/Poor)</option>
+          <option value="A">A</option>
+          <option value="B">B</option>
+          <option value="C">C</option>
         </select>
+
+        <!-- LINKED COMMENTARY SECTION -->
+        <div class="commentary-box">
+          <label><strong>Commentaries & Their Authors:</strong></label>
+          <div id="commentaryContainer" style="margin-top: 8px;"></div>
+          <button type="button" class="btn-add" onclick="addCommentaryRow()">+ Add Commentary & Author</button>
+        </div>
       </div>
       <br>
-      <button type="submit">Add Book to Library</button>
+      <button type="submit" id="submitBtn">Add Book to Library</button>
+      <button type="button" id="cancelBtn" onclick="resetForm()" style="background-color: #6c757d; display: none; margin-top: 5px;">Cancel Editing</button>
     </form>
   </div>
 
   <!-- SEARCH & BOOKS TABLE -->
   <div class="card">
     <h2>Book Catalogue</h2>
-    <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, Condition, etc...">
+    <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title (Original or English), Author, Commentary, Subject, etc...">
     <div style="overflow-x:auto;">
       <table id="booksTable">
         <thead>
@@ -70,32 +98,93 @@
   </div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyBmRremqPD39daJC5YFah-x5SsotoQxv9EZDHWsvmAoht7KDjI9HqV_BVM1nTHnLXq/exec';
+    const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL';
+    const ADMIN_PASSWORD = 'admin123';
+    let isAdmin = false;
+    let globalData = [];
 
-    // Load Books on Page Load
-    window.onload = fetchBooks;
+    window.onload = function() {
+      addCommentaryRow();
+      fetchBooks();
+    };
+
+    function toggleAdminLogin() {
+      const pwd = prompt("Enter Admin Password:");
+      if (pwd === ADMIN_PASSWORD) {
+        isAdmin = true;
+        alert("Admin mode active!");
+        updateAdminUI();
+      } else if (pwd !== null) {
+        alert("Incorrect Password!");
+      }
+    }
+
+    function logoutAdmin() {
+      isAdmin = false;
+      alert("Logged out of Admin mode.");
+      updateAdminUI();
+    }
+
+    function updateAdminUI() {
+      const adminElements = document.querySelectorAll('.admin-only');
+      adminElements.forEach(el => el.style.display = isAdmin ? 'block' : 'none');
+      document.getElementById('adminLoginBtn').style.display = isAdmin ? 'none' : 'inline-block';
+      document.getElementById('adminLogoutBtn').style.display = isAdmin ? 'inline-block' : 'none';
+      fetchBooks();
+    }
+
+    function addCommentaryRow(name = '', author = '') {
+      const container = document.getElementById('commentaryContainer');
+      const div = document.createElement('div');
+      div.className = 'commentary-row';
+      div.innerHTML = `
+        <input type="text" class="comm-name" placeholder="Commentary Title" value="${name}">
+        <input type="text" class="comm-author" placeholder="Author of Commentary" value="${author}">
+        <button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>
+      `;
+      container.appendChild(div);
+    }
+
+    function getLinkedCommentaries() {
+      const names = document.querySelectorAll('.comm-name');
+      const authors = document.querySelectorAll('.comm-author');
+      let result = [];
+      names.forEach((elem, idx) => {
+        const commName = elem.value.trim();
+        const commAuthor = authors[idx].value.trim();
+        if (commName || commAuthor) {
+          result.push(`${commName || 'Untitled'} (Author: ${commAuthor || 'Unknown'})`);
+        }
+      });
+      return result.join(' | ');
+    }
 
     function fetchBooks() {
       fetch(SCRIPT_URL)
         .then(res => res.json())
         .then(data => {
+          globalData = data;
           const head = document.getElementById('tableHead');
           const body = document.getElementById('tableBody');
           head.innerHTML = '';
           body.innerHTML = '';
 
           if (data.length > 0) {
-            // Set Headers
-            data[0].forEach(col => {
-              head.innerHTML += `<th>${col}</th>`;
-            });
+            data[0].forEach(col => { head.innerHTML += `<th>${col}</th>`; });
+            if (isAdmin) { head.innerHTML += `<th>Actions</th>`; }
 
-            // Set Data Rows
             for (let i = 1; i < data.length; i++) {
               let rowHtml = '<tr>';
               data[i].forEach(cell => {
                 rowHtml += `<td>${cell}</td>`;
               });
+
+              if (isAdmin) {
+                rowHtml += `<td>
+                  <button class="btn-edit" onclick="editBook(${i})">Edit</button>
+                  <button class="btn-delete" onclick="deleteBook(${i + 1})">Delete</button>
+                </td>`;
+              }
               rowHtml += '</tr>';
               body.innerHTML += rowHtml;
             }
@@ -103,44 +192,109 @@
         });
     }
 
-    // Add Book Event
     document.getElementById('addBookForm').addEventListener('submit', function(e) {
       e.preventDefault();
       
+      const editRowIndex = document.getElementById('editRowIndex').value;
       const payload = {
-        slNo: document.getElementById('slNo').value,
-        title: document.getElementById('title').value,
-        subTitle: document.getElementById('subTitle').value,
-        author: document.getElementById('author').value,
-        editor: document.getElementById('editor').value,
-        commentaryAuthor: document.getElementById('commentaryAuthor').value,
-        lang: document.getElementById('lang').value,
-        vol: document.getElementById('vol').value,
-        publisher: document.getElementById('publisher').value,
-        year: document.getElementById('year').value,
-        isbn: document.getElementById('isbn').value,
-        topic: document.getElementById('topic').value,
-        subject: document.getElementById('subject').value,
-        condition: document.getElementById('condition').value
+        action: editRowIndex ? "update" : "add",
+        rowIndex: editRowIndex ? parseInt(editRowIndex) + 1 : null,
+        data: {
+          slNo: document.getElementById('slNo').value,
+          title: document.getElementById('title').value,
+          titleEng: document.getElementById('titleEng').value,
+          subTitle: document.getElementById('subTitle').value,
+          author: document.getElementById('author').value,
+          editor: document.getElementById('editor').value,
+          commentariesLinked: getLinkedCommentaries(),
+          lang: document.getElementById('lang').value,
+          vol: document.getElementById('vol').value,
+          publisher: document.getElementById('publisher').value,
+          year: document.getElementById('year').value,
+          isbn: document.getElementById('isbn').value,
+          topic: document.getElementById('topic').value,
+          subject: document.getElementById('subject').value,
+          condition: document.getElementById('condition').value
+        }
       };
 
-      fetch(SCRIPT_URL, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      })
+      fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
       .then(res => res.json())
-      .then(res => {
-        alert('Book added successfully!');
-        document.getElementById('addBookForm').reset();
+      .then(() => {
+        alert(editRowIndex ? 'Book updated!' : 'Book added!');
+        resetForm();
         fetchBooks();
       });
     });
 
-    // Real-Time Search Function
+    function editBook(index) {
+      const row = globalData[index];
+      document.getElementById('editRowIndex').value = index;
+      document.getElementById('slNo').value = row[0] || '';
+      document.getElementById('title').value = row[1] || '';
+      document.getElementById('titleEng').value = row[2] || '';
+      document.getElementById('subTitle').value = row[3] || '';
+      document.getElementById('author').value = row[4] || '';
+      document.getElementById('editor').value = row[5] || '';
+
+      document.getElementById('commentaryContainer').innerHTML = '';
+      const commString = row[6] || '';
+      if (commString) {
+        const pairs = commString.split(' | ');
+        pairs.forEach(pair => {
+          const match = pair.match(/(.*) \(Author: (.*)\)/);
+          if (match) {
+            addCommentaryRow(match[1], match[2]);
+          } else {
+            addCommentaryRow(pair, '');
+          }
+        });
+      } else {
+        addCommentaryRow();
+      }
+
+      document.getElementById('lang').value = row[7] || '';
+      document.getElementById('vol').value = row[8] || '';
+      document.getElementById('publisher').value = row[9] || '';
+      document.getElementById('year').value = row[10] || '';
+      document.getElementById('isbn').value = row[11] || '';
+      document.getElementById('topic').value = row[12] || '';
+      document.getElementById('subject').value = row[13] || '';
+      document.getElementById('condition').value = row[14] || '';
+
+      document.getElementById('formTitle').innerText = 'Edit Book Information';
+      document.getElementById('submitBtn').innerText = 'Update Book Info';
+      document.getElementById('cancelBtn').style.display = 'inline-block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.getElementById('addBookForm').reset();
+      document.getElementById('editRowIndex').value = '';
+      document.getElementById('commentaryContainer').innerHTML = '';
+      addCommentaryRow();
+      document.getElementById('formTitle').innerText = 'Add New Book';
+      document.getElementById('submitBtn').innerText = 'Add Book to Library';
+      document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    function deleteBook(rowIndex) {
+      if (confirm('Are you sure you want to delete this book?')) {
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'delete', rowIndex: rowIndex })
+        })
+        .then(res => res.json())
+        .then(() => {
+          alert('Book deleted!');
+          fetchBooks();
+        });
+      }
+    }
+
     function searchBooks() {
       const input = document.getElementById('searchBox').value.toLowerCase();
       const rows = document.getElementById('tableBody').getElementsByTagName('tr');
-
       for (let i = 0; i < rows.length; i++) {
         const text = rows[i].textContent.toLowerCase();
         rows[i].style.display = text.includes(input) ? '' : 'none';
