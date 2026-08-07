@@ -95,8 +95,9 @@
       </table>
     </div>
   </div>
+
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwOFvqhztwh5RLM-ANyYMc6j0g__H5AQA40g7RTYWt266wa03yrItGsrZym-IiawXUL/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydUNQacZxE91f6IC6vuQlZsVGGUj8-mFdwuzU2Hpw1CRjFq7DNWZT2hWyIelmYErxU/exec';
   
   let adminToken = null;
   let globalData = [];
@@ -201,6 +202,36 @@
       .catch(err => console.error("Error fetching books:", err));
   }
 
+  // Client-side Duplicate Checker
+  function isDuplicateLocal(newData, editIndex) {
+    if (!globalData || globalData.length <= 1) return false;
+
+    for (let i = 1; i < globalData.length; i++) {
+      // If editing an existing row, ignore comparing against itself
+      if (editIndex && parseInt(editIndex) === i) continue;
+
+      const row = globalData[i];
+      const match = 
+        String(row[1] || '').trim().toLowerCase() === String(newData.title || '').trim().toLowerCase() &&
+        String(row[2] || '').trim().toLowerCase() === String(newData.titleEng || '').trim().toLowerCase() &&
+        String(row[3] || '').trim().toLowerCase() === String(newData.subTitle || '').trim().toLowerCase() &&
+        String(row[4] || '').trim().toLowerCase() === String(newData.author || '').trim().toLowerCase() &&
+        String(row[5] || '').trim().toLowerCase() === String(newData.editor || '').trim().toLowerCase() &&
+        String(row[6] || '').trim().toLowerCase() === String(newData.commentariesLinked || '').trim().toLowerCase() &&
+        String(row[7] || '').trim().toLowerCase() === String(newData.lang || '').trim().toLowerCase() &&
+        String(row[8] || '').trim().toLowerCase() === String(newData.vol || '').trim().toLowerCase() &&
+        String(row[9] || '').trim().toLowerCase() === String(newData.publisher || '').trim().toLowerCase() &&
+        String(row[10] || '').trim().toLowerCase() === String(newData.year || '').trim().toLowerCase() &&
+        String(row[11] || '').trim().toLowerCase() === String(newData.isbn || '').trim().toLowerCase() &&
+        String(row[12] || '').trim().toLowerCase() === String(newData.topic || '').trim().toLowerCase() &&
+        String(row[13] || '').trim().toLowerCase() === String(newData.subject || '').trim().toLowerCase() &&
+        String(row[14] || '').trim().toLowerCase() === String(newData.condition || '').trim().toLowerCase();
+
+      if (match) return true;
+    }
+    return false;
+  }
+
   document.getElementById('addBookForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -210,27 +241,35 @@
       return;
     }
 
+    const formData = {
+      slNo: document.getElementById('slNo').value,
+      title: document.getElementById('title').value,
+      titleEng: document.getElementById('titleEng').value,
+      subTitle: document.getElementById('subTitle').value,
+      author: document.getElementById('author').value,
+      editor: document.getElementById('editor').value,
+      commentariesLinked: getLinkedCommentaries(),
+      lang: document.getElementById('lang').value,
+      vol: document.getElementById('vol').value,
+      publisher: document.getElementById('publisher').value,
+      year: document.getElementById('year').value,
+      isbn: document.getElementById('isbn').value,
+      topic: document.getElementById('topic').value,
+      subject: document.getElementById('subject').value,
+      condition: document.getElementById('condition').value
+    };
+
+    // Fast local duplicate check
+    if (!editRowIndex && isDuplicateLocal(formData, editRowIndex)) {
+      alert("Duplicate entry detected! A book with identical information already exists in the catalogue.");
+      return;
+    }
+
     const payload = {
       action: editRowIndex ? "update" : "add",
       adminToken: adminToken,
       rowIndex: editRowIndex ? parseInt(editRowIndex) + 1 : null,
-      data: {
-        slNo: document.getElementById('slNo').value,
-        title: document.getElementById('title').value,
-        titleEng: document.getElementById('titleEng').value,
-        subTitle: document.getElementById('subTitle').value,
-        author: document.getElementById('author').value,
-        editor: document.getElementById('editor').value,
-        commentariesLinked: getLinkedCommentaries(),
-        lang: document.getElementById('lang').value,
-        vol: document.getElementById('vol').value,
-        publisher: document.getElementById('publisher').value,
-        year: document.getElementById('year').value,
-        isbn: document.getElementById('isbn').value,
-        topic: document.getElementById('topic').value,
-        subject: document.getElementById('subject').value,
-        condition: document.getElementById('condition').value
-      }
+      data: formData
     };
 
     fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
@@ -335,4 +374,5 @@
     }
   }
 </script>
- 
+</body>
+</html>
