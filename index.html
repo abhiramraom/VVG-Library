@@ -51,19 +51,44 @@
       <input type="hidden" id="editRowIndex" value="">
       <div class="form-grid">
         <input type="text" id="slNo" placeholder="Sl. No (Auto-generated)" disabled>
-        <input type="text" id="title" placeholder="Title (Original)" required>
-        <input type="text" id="titleEng" placeholder="Title (English)">
-        <input type="text" id="subTitle" placeholder="Sub-title">
-        <input type="text" id="author" placeholder="Author & CoAuthor">
-        <input type="text" id="editor" placeholder="Editor & Co-Editor">
-        <input type="text" id="lang" placeholder="Language">
-        <input type="text" id="vol" placeholder="Vol (IF)">
-        <input type="text" id="publisher" placeholder="Publisher">
-        <input type="text" id="year" placeholder="Year of Print">
-        <input type="text" id="isbn" placeholder="ISBN or ISSN">
-        <input type="text" id="topic" placeholder="Topic">
-        <input type="text" id="subject" placeholder="Subject">
         
+        <!-- Input fields with datalists attached for dynamic suggestions -->
+        <input type="text" id="title" placeholder="Title (Original)" list="list_title" required>
+        <datalist id="list_title"></datalist>
+
+        <input type="text" id="titleEng" placeholder="Title (English)" list="list_titleEng">
+        <datalist id="list_titleEng"></datalist>
+
+        <input type="text" id="subTitle" placeholder="Sub-title" list="list_subTitle">
+        <datalist id="list_subTitle"></datalist>
+
+        <input type="text" id="author" placeholder="Author & CoAuthor" list="list_author">
+        <datalist id="list_author"></datalist>
+
+        <input type="text" id="editor" placeholder="Editor & Co-Editor" list="list_editor">
+        <datalist id="list_editor"></datalist>
+
+        <input type="text" id="lang" placeholder="Language" list="list_lang">
+        <datalist id="list_lang"></datalist>
+
+        <input type="text" id="vol" placeholder="Vol (IF)" list="list_vol">
+        <datalist id="list_vol"></datalist>
+
+        <input type="text" id="publisher" placeholder="Publisher" list="list_publisher">
+        <datalist id="list_publisher"></datalist>
+
+        <input type="text" id="year" placeholder="Year of Print" list="list_year">
+        <datalist id="list_year"></datalist>
+
+        <input type="text" id="isbn" placeholder="ISBN or ISSN" list="list_isbn">
+        <datalist id="list_isbn"></datalist>
+
+        <input type="text" id="topic" placeholder="Topic" list="list_topic">
+        <datalist id="list_topic"></datalist>
+
+        <input type="text" id="subject" placeholder="Subject" list="list_subject">
+        <datalist id="list_subject"></datalist>
+
         <select id="condition" required>
           <option value="" disabled selected>Select Condition...</option>
           <option value="A">A</option>
@@ -83,6 +108,10 @@
     </form>
   </div>
 
+  <!-- Commentary Suggestion Lists -->
+  <datalist id="list_commName"></datalist>
+  <datalist id="list_commAuthor"></datalist>
+
   <div class="card">
     <h2>Book Catalogue</h2>
     <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, etc...">
@@ -97,10 +126,25 @@
   </div>
 
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydUNQacZxE91f6IC6vuQlZsVGGUj8-mFdwuzU2Hpw1CRjFq7DNWZT2hWyIelmYErxU/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxf_iNeg5wC_OcM32Mnm7zSI5zIXOyOOAayVG0Kl87db7F24N3N7PNcScSXSX68F43/exec';
   
   let adminToken = null;
   let globalData = [];
+
+  const FIELD_MAP = {
+    1: 'list_title',
+    2: 'list_titleEng',
+    3: 'list_subTitle',
+    4: 'list_author',
+    5: 'list_editor',
+    7: 'list_lang',
+    8: 'list_vol',
+    9: 'list_publisher',
+    10: 'list_year',
+    11: 'list_isbn',
+    12: 'list_topic',
+    13: 'list_subject'
+  };
 
   window.onload = function() {
     addCommentaryRow();
@@ -148,8 +192,8 @@
     const container = document.getElementById('commentaryContainer');
     const div = document.createElement('div');
     div.className = 'commentary-row';
-    div.innerHTML = '<input type="text" class="comm-name" placeholder="Commentary Title" value="' + name + '">' +
-                    '<input type="text" class="comm-author" placeholder="Author of Commentary" value="' + author + '">' +
+    div.innerHTML = '<input type="text" class="comm-name" placeholder="Commentary Title" list="list_commName" value="' + name + '">' +
+                    '<input type="text" class="comm-author" placeholder="Author of Commentary" list="list_commAuthor" value="' + author + '">' +
                     '<button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>';
     container.appendChild(div);
   }
@@ -168,11 +212,69 @@
     return result.join(' | ');
   }
 
+  function populateAllDatalists(data) {
+    if (!data || data.length <= 1) return;
+
+    const commNames = new Set();
+    const commAuthors = new Set();
+
+    Object.keys(FIELD_MAP).forEach(colIdx => {
+      const listId = FIELD_MAP[colIdx];
+      const datalist = document.getElementById(listId);
+      if (!datalist) return;
+
+      const uniqueValues = new Set();
+      for (let i = 1; i < data.length; i++) {
+        const val = data[i][colIdx];
+        if (val && String(val).trim() !== '') {
+          uniqueValues.add(String(val).trim());
+        }
+      }
+
+      datalist.innerHTML = '';
+      uniqueValues.forEach(val => {
+        const opt = document.createElement('option');
+        opt.value = val;
+        datalist.appendChild(opt);
+      });
+    });
+
+    for (let i = 1; i < data.length; i++) {
+      const commStr = data[i][6];
+      if (commStr) {
+        const pairs = String(commStr).split(' | ');
+        pairs.forEach(pair => {
+          const match = pair.match(/(.*) \(Author: (.*)\)/);
+          if (match) {
+            if (match[1] && match[1] !== 'Untitled') commNames.add(match[1].trim());
+            if (match[2] && match[2] !== 'Unknown') commAuthors.add(match[2].trim());
+          }
+        });
+      }
+    }
+
+    fillDatalistOptions('list_commName', commNames);
+    fillDatalistOptions('list_commAuthor', commAuthors);
+  }
+
+  function fillDatalistOptions(id, setValues) {
+    const elem = document.getElementById(id);
+    if (!elem) return;
+    elem.innerHTML = '';
+    setValues.forEach(val => {
+      const opt = document.createElement('option');
+      opt.value = val;
+      elem.appendChild(opt);
+    });
+  }
+
   function fetchBooks() {
     fetch(SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
         globalData = data;
+        populateAllDatalists(data);
+
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
         head.innerHTML = '';
@@ -202,36 +304,6 @@
       .catch(err => console.error("Error fetching books:", err));
   }
 
-  // Client-side Duplicate Checker
-  function isDuplicateLocal(newData, editIndex) {
-    if (!globalData || globalData.length <= 1) return false;
-
-    for (let i = 1; i < globalData.length; i++) {
-      // If editing an existing row, ignore comparing against itself
-      if (editIndex && parseInt(editIndex) === i) continue;
-
-      const row = globalData[i];
-      const match = 
-        String(row[1] || '').trim().toLowerCase() === String(newData.title || '').trim().toLowerCase() &&
-        String(row[2] || '').trim().toLowerCase() === String(newData.titleEng || '').trim().toLowerCase() &&
-        String(row[3] || '').trim().toLowerCase() === String(newData.subTitle || '').trim().toLowerCase() &&
-        String(row[4] || '').trim().toLowerCase() === String(newData.author || '').trim().toLowerCase() &&
-        String(row[5] || '').trim().toLowerCase() === String(newData.editor || '').trim().toLowerCase() &&
-        String(row[6] || '').trim().toLowerCase() === String(newData.commentariesLinked || '').trim().toLowerCase() &&
-        String(row[7] || '').trim().toLowerCase() === String(newData.lang || '').trim().toLowerCase() &&
-        String(row[8] || '').trim().toLowerCase() === String(newData.vol || '').trim().toLowerCase() &&
-        String(row[9] || '').trim().toLowerCase() === String(newData.publisher || '').trim().toLowerCase() &&
-        String(row[10] || '').trim().toLowerCase() === String(newData.year || '').trim().toLowerCase() &&
-        String(row[11] || '').trim().toLowerCase() === String(newData.isbn || '').trim().toLowerCase() &&
-        String(row[12] || '').trim().toLowerCase() === String(newData.topic || '').trim().toLowerCase() &&
-        String(row[13] || '').trim().toLowerCase() === String(newData.subject || '').trim().toLowerCase() &&
-        String(row[14] || '').trim().toLowerCase() === String(newData.condition || '').trim().toLowerCase();
-
-      if (match) return true;
-    }
-    return false;
-  }
-
   document.getElementById('addBookForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -258,12 +330,6 @@
       subject: document.getElementById('subject').value,
       condition: document.getElementById('condition').value
     };
-
-    // Fast local duplicate check
-    if (!editRowIndex && isDuplicateLocal(formData, editRowIndex)) {
-      alert("Duplicate entry detected! A book with identical information already exists in the catalogue.");
-      return;
-    }
 
     const payload = {
       action: editRowIndex ? "update" : "add",
