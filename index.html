@@ -32,6 +32,44 @@
     tr:nth-child(even) { background-color: #f9f9f9; }
     
     input:disabled { background-color: #e9ecef; cursor: not-allowed; }
+
+    /* Fast Custom Auto-Complete Overlay */
+    .autocomplete-wrapper { position: relative; }
+    .suggestions-box {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border: 1px solid #007bff;
+      border-radius: 0 0 6px 6px;
+      max-height: 220px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      display: none;
+    }
+    .suggestion-item {
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #eee;
+      font-size: 13px;
+    }
+    .suggestion-item:hover,
+    .suggestion-item.active { 
+      background-color: #007bff;
+      color: #ffffff;
+    }
+    .suggestion-item:hover strong,
+    .suggestion-item.active strong {
+      color: #ffffff;
+    }
+    .suggestion-item:hover .suggestion-meta,
+    .suggestion-item.active .suggestion-meta {
+      color: #e0e0e0;
+    }
+    .suggestion-item strong { color: #007bff; }
+    .suggestion-meta { font-size: 11px; color: #666; margin-top: 2px; }
   </style>
 </head>
 <body>
@@ -47,47 +85,28 @@
 
   <div class="card" id="bookFormCard">
     <h2 id="formTitle">Add New Book Entry</h2>
-    <form id="addBookForm">
+    <form id="addBookForm" autocomplete="off">
       <input type="hidden" id="editRowIndex" value="">
       <div class="form-grid">
         <input type="text" id="slNo" placeholder="Sl. No (Auto-generated)" disabled>
         
-        <!-- Input fields with datalists attached for dynamic suggestions -->
-        <input type="text" id="title" placeholder="Title (Original)" list="list_title" required>
-        <datalist id="list_title"></datalist>
+        <!-- Fast Auto-Fill Search Field with Keyboard Navigation -->
+        <div class="autocomplete-wrapper">
+          <input type="text" id="title" placeholder="Title (Original) - Type to search past entries..." oninput="onTitleInput(this.value)" onkeydown="handleKeyDown(event)" required>
+          <div id="titleSuggestions" class="suggestions-box"></div>
+        </div>
 
-        <input type="text" id="titleEng" placeholder="Title (English)" list="list_titleEng">
-        <datalist id="list_titleEng"></datalist>
-
-        <input type="text" id="subTitle" placeholder="Sub-title" list="list_subTitle">
-        <datalist id="list_subTitle"></datalist>
-
-        <input type="text" id="author" placeholder="Author & CoAuthor" list="list_author">
-        <datalist id="list_author"></datalist>
-
-        <input type="text" id="editor" placeholder="Editor & Co-Editor" list="list_editor">
-        <datalist id="list_editor"></datalist>
-
-        <input type="text" id="lang" placeholder="Language" list="list_lang">
-        <datalist id="list_lang"></datalist>
-
-        <input type="text" id="vol" placeholder="Vol (IF)" list="list_vol">
-        <datalist id="list_vol"></datalist>
-
-        <input type="text" id="publisher" placeholder="Publisher" list="list_publisher">
-        <datalist id="list_publisher"></datalist>
-
-        <input type="text" id="year" placeholder="Year of Print" list="list_year">
-        <datalist id="list_year"></datalist>
-
-        <input type="text" id="isbn" placeholder="ISBN or ISSN" list="list_isbn">
-        <datalist id="list_isbn"></datalist>
-
-        <input type="text" id="topic" placeholder="Topic" list="list_topic">
-        <datalist id="list_topic"></datalist>
-
-        <input type="text" id="subject" placeholder="Subject" list="list_subject">
-        <datalist id="list_subject"></datalist>
+        <input type="text" id="titleEng" placeholder="Title (English)">
+        <input type="text" id="subTitle" placeholder="Sub-title">
+        <input type="text" id="author" placeholder="Author & CoAuthor">
+        <input type="text" id="editor" placeholder="Editor & Co-Editor">
+        <input type="text" id="lang" placeholder="Language">
+        <input type="text" id="vol" placeholder="Vol (IF)">
+        <input type="text" id="publisher" placeholder="Publisher">
+        <input type="text" id="year" placeholder="Year of Print">
+        <input type="text" id="isbn" placeholder="ISBN or ISSN">
+        <input type="text" id="topic" placeholder="Topic">
+        <input type="text" id="subject" placeholder="Subject">
 
         <select id="condition" required>
           <option value="" disabled selected>Select Condition...</option>
@@ -108,10 +127,6 @@
     </form>
   </div>
 
-  <!-- Commentary Suggestion Lists -->
-  <datalist id="list_commName"></datalist>
-  <datalist id="list_commAuthor"></datalist>
-
   <div class="card">
     <h2>Book Catalogue</h2>
     <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, etc...">
@@ -130,21 +145,7 @@
   
   let adminToken = null;
   let globalData = [];
-
-  const FIELD_MAP = {
-    1: 'list_title',
-    2: 'list_titleEng',
-    3: 'list_subTitle',
-    4: 'list_author',
-    5: 'list_editor',
-    7: 'list_lang',
-    8: 'list_vol',
-    9: 'list_publisher',
-    10: 'list_year',
-    11: 'list_isbn',
-    12: 'list_topic',
-    13: 'list_subject'
-  };
+  let selectedIndex = -1; // Tracks current keyboard navigation selection
 
   window.onload = function() {
     addCommentaryRow();
@@ -192,8 +193,8 @@
     const container = document.getElementById('commentaryContainer');
     const div = document.createElement('div');
     div.className = 'commentary-row';
-    div.innerHTML = '<input type="text" class="comm-name" placeholder="Commentary Title" list="list_commName" value="' + name + '">' +
-                    '<input type="text" class="comm-author" placeholder="Author of Commentary" list="list_commAuthor" value="' + author + '">' +
+    div.innerHTML = '<input type="text" class="comm-name" placeholder="Commentary Title" value="' + name + '">' +
+                    '<input type="text" class="comm-author" placeholder="Author of Commentary" value="' + author + '">' +
                     '<button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>';
     container.appendChild(div);
   }
@@ -212,68 +213,11 @@
     return result.join(' | ');
   }
 
-  function populateAllDatalists(data) {
-    if (!data || data.length <= 1) return;
-
-    const commNames = new Set();
-    const commAuthors = new Set();
-
-    Object.keys(FIELD_MAP).forEach(colIdx => {
-      const listId = FIELD_MAP[colIdx];
-      const datalist = document.getElementById(listId);
-      if (!datalist) return;
-
-      const uniqueValues = new Set();
-      for (let i = 1; i < data.length; i++) {
-        const val = data[i][colIdx];
-        if (val && String(val).trim() !== '') {
-          uniqueValues.add(String(val).trim());
-        }
-      }
-
-      datalist.innerHTML = '';
-      uniqueValues.forEach(val => {
-        const opt = document.createElement('option');
-        opt.value = val;
-        datalist.appendChild(opt);
-      });
-    });
-
-    for (let i = 1; i < data.length; i++) {
-      const commStr = data[i][6];
-      if (commStr) {
-        const pairs = String(commStr).split(' | ');
-        pairs.forEach(pair => {
-          const match = pair.match(/(.*) \(Author: (.*)\)/);
-          if (match) {
-            if (match[1] && match[1] !== 'Untitled') commNames.add(match[1].trim());
-            if (match[2] && match[2] !== 'Unknown') commAuthors.add(match[2].trim());
-          }
-        });
-      }
-    }
-
-    fillDatalistOptions('list_commName', commNames);
-    fillDatalistOptions('list_commAuthor', commAuthors);
-  }
-
-  function fillDatalistOptions(id, setValues) {
-    const elem = document.getElementById(id);
-    if (!elem) return;
-    elem.innerHTML = '';
-    setValues.forEach(val => {
-      const opt = document.createElement('option');
-      opt.value = val;
-      elem.appendChild(opt);
-    });
-  }
-
   function fetchBooks() {
     fetch(SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
         globalData = data;
-        populateAllDatalists(data);
 
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
@@ -304,6 +248,138 @@
       .catch(err => console.error("Error fetching books:", err));
   }
 
+  /* --- FAST AUTO-COMPLETE WITH KEYBOARD NAVIGATION --- */
+  function onTitleInput(val) {
+    const box = document.getElementById('titleSuggestions');
+    const query = val.trim().toLowerCase();
+    selectedIndex = -1; // Reset selection index on new input
+
+    if (!query || !globalData || globalData.length <= 1) {
+      box.style.display = 'none';
+      return;
+    }
+
+    const matches = [];
+    for (let i = 1; i < globalData.length; i++) {
+      const row = globalData[i];
+      const title = String(row[1] || '').toLowerCase();
+      const titleEng = String(row[2] || '').toLowerCase();
+      const author = String(row[4] || '').toLowerCase();
+      const publisher = String(row[9] || '').toLowerCase();
+
+      if (title.includes(query) || titleEng.includes(query) || author.includes(query) || publisher.includes(query)) {
+        matches.push(row);
+        if (matches.length >= 8) break;
+      }
+    }
+
+    if (matches.length === 0) {
+      box.style.display = 'none';
+      return;
+    }
+
+    box.innerHTML = '';
+    matches.forEach(row => {
+      const item = document.createElement('div');
+      item.className = 'suggestion-item';
+      item.innerHTML = `<strong>${row[1] || 'Untitled'}</strong> ${row[2] ? '(' + row[2] + ')' : ''}` +
+                       `<div class="suggestion-meta">Author: ${row[4] || 'N/A'} | Publisher: ${row[9] || 'N/A'} | Lang: ${row[7] || 'N/A'}</div>`;
+      
+      // Store full row data directly on the DOM element
+      item.dataset.row = JSON.stringify(row);
+
+      item.onclick = function() {
+        populateFormFields(row);
+        box.style.display = 'none';
+      };
+      box.appendChild(item);
+    });
+
+    box.style.display = 'block';
+  }
+
+  function handleKeyDown(e) {
+    const box = document.getElementById('titleSuggestions');
+    const items = box.querySelectorAll('.suggestion-item');
+
+    if (box.style.display === 'none' || items.length === 0) return;
+
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      selectedIndex++;
+      if (selectedIndex >= items.length) selectedIndex = 0;
+      updateActiveItem(items);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      selectedIndex--;
+      if (selectedIndex < 0) selectedIndex = items.length - 1;
+      updateActiveItem(items);
+    } else if (e.key === 'Enter') {
+      if (selectedIndex >= 0 && selectedIndex < items.length) {
+        e.preventDefault(); // Prevent accidental form submission
+        const selectedRow = JSON.parse(items[selectedIndex].dataset.row);
+        populateFormFields(selectedRow);
+        box.style.display = 'none';
+        selectedIndex = -1;
+      }
+    } else if (e.key === 'Escape') {
+      box.style.display = 'none';
+      selectedIndex = -1;
+    }
+  }
+
+  function updateActiveItem(items) {
+    items.forEach((item, index) => {
+      if (index === selectedIndex) {
+        item.classList.add('active');
+        item.scrollIntoView({ block: 'nearest' });
+      } else {
+        item.classList.remove('active');
+      }
+    });
+  }
+
+  function populateFormFields(row) {
+    document.getElementById('title').value = row[1] || '';
+    document.getElementById('titleEng').value = row[2] || '';
+    document.getElementById('subTitle').value = row[3] || '';
+    document.getElementById('author').value = row[4] || '';
+    document.getElementById('editor').value = row[5] || '';
+
+    document.getElementById('commentaryContainer').innerHTML = '';
+    const commString = row[6] || '';
+    if (commString) {
+      const pairs = commString.split(' | ');
+      pairs.forEach(pair => {
+        const match = pair.match(/(.*) \(Author: (.*)\)/);
+        if (match) {
+          addCommentaryRow(match[1], match[2]);
+        } else {
+          addCommentaryRow(pair, '');
+        }
+      });
+    } else {
+      addCommentaryRow();
+    }
+
+    document.getElementById('lang').value = row[7] || '';
+    document.getElementById('vol').value = row[8] || '';
+    document.getElementById('publisher').value = row[9] || '';
+    document.getElementById('year').value = row[10] || '';
+    document.getElementById('isbn').value = row[11] || '';
+    document.getElementById('topic').value = row[12] || '';
+    document.getElementById('subject').value = row[13] || '';
+    document.getElementById('condition').value = row[14] || '';
+  }
+
+  document.addEventListener('click', function(e) {
+    if (!e.target.closest('.autocomplete-wrapper')) {
+      document.getElementById('titleSuggestions').style.display = 'none';
+      selectedIndex = -1;
+    }
+  });
+
+  /* --- FORM SUBMISSION & ADMIN ACTIONS --- */
   document.getElementById('addBookForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -360,36 +436,8 @@
     const row = globalData[index];
     document.getElementById('editRowIndex').value = index;
     document.getElementById('slNo').value = row[0] || '';
-    document.getElementById('title').value = row[1] || '';
-    document.getElementById('titleEng').value = row[2] || '';
-    document.getElementById('subTitle').value = row[3] || '';
-    document.getElementById('author').value = row[4] || '';
-    document.getElementById('editor').value = row[5] || '';
-
-    document.getElementById('commentaryContainer').innerHTML = '';
-    const commString = row[6] || '';
-    if (commString) {
-      const pairs = commString.split(' | ');
-      pairs.forEach(pair => {
-        const match = pair.match(/(.*) \(Author: (.*)\)/);
-        if (match) {
-          addCommentaryRow(match[1], match[2]);
-        } else {
-          addCommentaryRow(pair, '');
-        }
-      });
-    } else {
-      addCommentaryRow();
-    }
-
-    document.getElementById('lang').value = row[7] || '';
-    document.getElementById('vol').value = row[8] || '';
-    document.getElementById('publisher').value = row[9] || '';
-    document.getElementById('year').value = row[10] || '';
-    document.getElementById('isbn').value = row[11] || '';
-    document.getElementById('topic').value = row[12] || '';
-    document.getElementById('subject').value = row[13] || '';
-    document.getElementById('condition').value = row[14] || '';
+    
+    populateFormFields(row);
 
     document.getElementById('formTitle').innerText = 'Edit Book Information (Admin)';
     document.getElementById('submitBtn').innerText = 'Update Book Info';
