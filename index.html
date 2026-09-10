@@ -14,7 +14,8 @@
     button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
     button:hover { background-color: #218838; }
     
-    button:disabled { background-color: #a5d6a7 !important; cursor: not-allowed !important; }
+    /* Strict lock styling for disabled buttons */
+    button:disabled { background-color: #a5d6a7 !important; color: #ffffff !important; cursor: not-allowed !important; pointer-events: none !important; opacity: 0.6; }
 
     .btn-admin { background-color: #007bff; width: auto; padding: 8px 16px; }
     .btn-logout { background-color: #6c757d; width: auto; padding: 8px 16px; }
@@ -35,7 +36,7 @@
     
     input:disabled { background-color: #e9ecef; cursor: not-allowed; }
 
-    .autocomplete-wrapper { position: relative; }
+    .autocomplete-wrapper { position: relative; width: 100%; }
     .suggestions-box {
       position: absolute;
       top: 100%;
@@ -47,8 +48,8 @@
       max-height: 220px;
       overflow-y: auto;
       z-index: 1000;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
       display: none;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
     }
     .suggestion-item {
       padding: 10px;
@@ -90,21 +91,64 @@
         <input type="text" id="slNo" placeholder="Sl. No (Auto-generated)" disabled>
         
         <div class="autocomplete-wrapper">
-          <input type="text" id="title" placeholder="Title (Original) - Type to search past entries..." oninput="onTitleInput(this.value)" onkeydown="handleKeyDown(event)" required>
-          <div id="titleSuggestions" class="suggestions-box"></div>
+          <input type="text" id="title" data-col="1" data-autocomplete="true" placeholder="Title (Original) - Type to search..." required>
+          <div class="suggestions-box"></div>
         </div>
 
-        <input type="text" id="titleEng" placeholder="Title (English)">
-        <input type="text" id="subTitle" placeholder="Sub-title">
-        <input type="text" id="author" placeholder="Author & CoAuthor">
-        <input type="text" id="editor" placeholder="Editor & Co-Editor">
-        <input type="text" id="lang" placeholder="Language">
-        <input type="text" id="vol" placeholder="Vol (IF)">
-        <input type="text" id="publisher" placeholder="Publisher">
-        <input type="text" id="year" placeholder="Year of Print">
-        <input type="text" id="isbn" placeholder="ISBN or ISSN">
-        <input type="text" id="topic" placeholder="Topic">
-        <input type="text" id="subject" placeholder="Subject">
+        <div class="autocomplete-wrapper">
+          <input type="text" id="titleEng" data-col="2" data-autocomplete="true" placeholder="Title (English)">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="subTitle" data-col="3" data-autocomplete="true" placeholder="Sub-title">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="author" data-col="4" data-autocomplete="true" placeholder="Author & CoAuthor">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="editor" data-col="5" data-autocomplete="true" placeholder="Editor & Co-Editor">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="lang" data-col="7" data-autocomplete="true" placeholder="Language">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="vol" data-col="8" data-autocomplete="true" placeholder="Vol (IF)">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="publisher" data-col="9" data-autocomplete="true" placeholder="Publisher">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="year" data-col="10" data-autocomplete="true" placeholder="Year of Print">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="isbn" data-col="11" data-autocomplete="true" placeholder="ISBN or ISSN">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="topic" data-col="12" data-autocomplete="true" placeholder="Topic">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="autocomplete-wrapper">
+          <input type="text" id="subject" data-col="13" data-autocomplete="true" placeholder="Subject">
+          <div class="suggestions-box"></div>
+        </div>
 
         <select id="condition" required>
           <option value="" disabled selected>Select Condition...</option>
@@ -145,10 +189,14 @@
   let adminToken = null;
   let globalData = [];
   let selectedIndex = -1;
+  
+  // LOCK STATE TO PREVENT DOUBLE-SUBMISSION
+  let isSubmitting = false;
 
   window.onload = function() {
     addCommentaryRow();
     fetchBooks();
+    setupGlobalAutocomplete();
   };
 
   function toggleAdminLogin() {
@@ -212,7 +260,6 @@
     return result.join(' | ');
   }
 
-  /* --- FAST BATCH RENDER DATA --- */
   function fetchBooks() {
     const loading = document.getElementById('loadingIndicator');
     const table = document.getElementById('booksTable');
@@ -229,13 +276,11 @@
         const body = document.getElementById('tableBody');
 
         if (data && data.length > 0) {
-          // Batch generate headers
           let headHtml = '';
           data[0].forEach(col => { headHtml += '<th>' + col + '</th>'; });
           if (adminToken) { headHtml += '<th>Actions</th>'; }
           head.innerHTML = headHtml;
 
-          // Batch generate rows using string buffer (much faster DOM paint)
           let bodyHtml = '';
           for (let i = 1; i < data.length; i++) {
             bodyHtml += '<tr>';
@@ -263,48 +308,55 @@
       });
   }
 
-  /* --- FAST AUTO-COMPLETE & KEYBOARD NAVIGATION --- */
-  function onTitleInput(val) {
-    const box = document.getElementById('titleSuggestions');
-    const query = val.trim().toLowerCase();
+  function setupGlobalAutocomplete() {
+    document.querySelectorAll('input[data-autocomplete="true"]').forEach(input => {
+      input.addEventListener('input', function() {
+        handleFieldInput(this);
+      });
+      input.addEventListener('keydown', function(e) {
+        handleFieldKeyDown(e, this);
+      });
+    });
+  }
+
+  function handleFieldInput(inputElem) {
+    const wrapper = inputElem.closest('.autocomplete-wrapper');
+    const box = wrapper.querySelector('.suggestions-box');
+    const query = inputElem.value.trim().toLowerCase();
+    const targetCol = parseInt(inputElem.dataset.col);
     selectedIndex = -1;
 
+    closeAllSuggestions();
+
     if (!query || !globalData || globalData.length <= 1) {
-      box.style.display = 'none';
       return;
     }
 
     const matches = [];
     for (let i = 1; i < globalData.length; i++) {
       const row = globalData[i];
-      const title = String(row[1] || '').toLowerCase();
-      const titleEng = String(row[2] || '').toLowerCase();
-      const author = String(row[4] || '').toLowerCase();
-      const publisher = String(row[9] || '').toLowerCase();
+      const fieldValue = String(row[targetCol] || '').toLowerCase();
 
-      if (title.includes(query) || titleEng.includes(query) || author.includes(query) || publisher.includes(query)) {
+      if (fieldValue.includes(query)) {
         matches.push(row);
         if (matches.length >= 8) break;
       }
     }
 
-    if (matches.length === 0) {
-      box.style.display = 'none';
-      return;
-    }
+    if (matches.length === 0) return;
 
     box.innerHTML = '';
     matches.forEach(row => {
       const item = document.createElement('div');
       item.className = 'suggestion-item';
-      item.innerHTML = `<strong>${row[1] || 'Untitled'}</strong> ${row[2] ? '(' + row[2] + ')' : ''}` +
-                       `<div class="suggestion-meta">Author: ${row[4] || 'N/A'} | Publisher: ${row[9] || 'N/A'} | Lang: ${row[7] || 'N/A'}</div>`;
+      item.innerHTML = `<strong>${row[targetCol] || 'N/A'}</strong>` +
+                       `<div class="suggestion-meta">Title: ${row[1] || 'Untitled'} | Author: ${row[4] || 'N/A'} | Publisher: ${row[9] || 'N/A'}</div>`;
       
       item.dataset.row = JSON.stringify(row);
 
       item.onclick = function() {
         populateFormFields(row);
-        box.style.display = 'none';
+        closeAllSuggestions();
       };
       box.appendChild(item);
     });
@@ -312,8 +364,9 @@
     box.style.display = 'block';
   }
 
-  function handleKeyDown(e) {
-    const box = document.getElementById('titleSuggestions');
+  function handleFieldKeyDown(e, inputElem) {
+    const wrapper = inputElem.closest('.autocomplete-wrapper');
+    const box = wrapper.querySelector('.suggestions-box');
     const items = box.querySelectorAll('.suggestion-item');
 
     if (box.style.display === 'none' || items.length === 0) return;
@@ -333,12 +386,10 @@
         e.preventDefault();
         const selectedRow = JSON.parse(items[selectedIndex].dataset.row);
         populateFormFields(selectedRow);
-        box.style.display = 'none';
-        selectedIndex = -1;
+        closeAllSuggestions();
       }
     } else if (e.key === 'Escape') {
-      box.style.display = 'none';
-      selectedIndex = -1;
+      closeAllSuggestions();
     }
   }
 
@@ -351,6 +402,13 @@
         item.classList.remove('active');
       }
     });
+  }
+
+  function closeAllSuggestions() {
+    document.querySelectorAll('.suggestions-box').forEach(box => {
+      box.style.display = 'none';
+    });
+    selectedIndex = -1;
   }
 
   function populateFormFields(row) {
@@ -388,25 +446,31 @@
 
   document.addEventListener('click', function(e) {
     if (!e.target.closest('.autocomplete-wrapper')) {
-      document.getElementById('titleSuggestions').style.display = 'none';
-      selectedIndex = -1;
+      closeAllSuggestions();
     }
   });
 
-  /* --- FORM SUBMISSION WITH PREVENTED DOUBLE-SUBMIT --- */
+  /* --- HARDENED SINGLE-SUBMISSION FORM HANDLER --- */
   document.getElementById('addBookForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    
+    e.stopPropagation();
+
+    // 1. Immediately drop duplicate triggers if processing is underway
+    if (isSubmitting) {
+      return false;
+    }
+
     const editRowIndex = document.getElementById('editRowIndex').value;
     if (editRowIndex && !adminToken) {
       alert("Only administrators can edit entries.");
       return;
     }
 
+    // 2. Lock execution flag and disable DOM button
+    isSubmitting = true;
     const submitBtn = document.getElementById('submitBtn');
     const originalText = submitBtn.innerText;
 
-    // Lock submit button immediately to prevent double clicks
     submitBtn.disabled = true;
     submitBtn.innerText = editRowIndex ? "⏳ Updating Book..." : "⏳ Saving Book...";
 
@@ -448,7 +512,8 @@
     })
     .catch(err => alert("Submission failed: " + err))
     .finally(() => {
-      // Re-enable button after response completes
+      // 3. Unlock submit flag and restore button only after request finishes
+      isSubmitting = false;
       submitBtn.disabled = false;
       submitBtn.innerText = originalText;
     });
