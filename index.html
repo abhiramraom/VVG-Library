@@ -14,6 +14,8 @@
     button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
     button:hover { background-color: #218838; }
     
+    button:disabled { background-color: #a5d6a7 !important; cursor: not-allowed !important; }
+
     .btn-admin { background-color: #007bff; width: auto; padding: 8px 16px; }
     .btn-logout { background-color: #6c757d; width: auto; padding: 8px 16px; }
     
@@ -33,7 +35,6 @@
     
     input:disabled { background-color: #e9ecef; cursor: not-allowed; }
 
-    /* Fast Custom Auto-Complete Overlay */
     .autocomplete-wrapper { position: relative; }
     .suggestions-box {
       position: absolute;
@@ -61,15 +62,13 @@
       color: #ffffff;
     }
     .suggestion-item:hover strong,
-    .suggestion-item.active strong {
-      color: #ffffff;
-    }
+    .suggestion-item.active strong { color: #ffffff; }
     .suggestion-item:hover .suggestion-meta,
-    .suggestion-item.active .suggestion-meta {
-      color: #e0e0e0;
-    }
+    .suggestion-item.active .suggestion-meta { color: #e0e0e0; }
     .suggestion-item strong { color: #007bff; }
     .suggestion-meta { font-size: 11px; color: #666; margin-top: 2px; }
+    
+    .loading-spinner { font-weight: bold; color: #007bff; padding: 15px; text-align: center; }
   </style>
 </head>
 <body>
@@ -90,7 +89,6 @@
       <div class="form-grid">
         <input type="text" id="slNo" placeholder="Sl. No (Auto-generated)" disabled>
         
-        <!-- Fast Auto-Fill Search Field with Keyboard Navigation -->
         <div class="autocomplete-wrapper">
           <input type="text" id="title" placeholder="Title (Original) - Type to search past entries..." oninput="onTitleInput(this.value)" onkeydown="handleKeyDown(event)" required>
           <div id="titleSuggestions" class="suggestions-box"></div>
@@ -131,7 +129,8 @@
     <h2>Book Catalogue</h2>
     <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, etc...">
     <div style="overflow-x:auto;">
-      <table id="booksTable">
+      <div id="loadingIndicator" class="loading-spinner">⏳ Fetching library records, please wait...</div>
+      <table id="booksTable" style="display:none;">
         <thead>
           <tr id="tableHead"></tr>
         </thead>
@@ -141,11 +140,11 @@
   </div>
 
 <script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyxf_iNeg5wC_OcM32Mnm7zSI5zIXOyOOAayVG0Kl87db7F24N3N7PNcScSXSX68F43/exec';
+  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydUNQacZxE91f6IC6vuQlZsVGGUj8-mFdwuzU2Hpw1CRjFq7DNWZT2hWyIelmYErxU/exec';
   
   let adminToken = null;
   let globalData = [];
-  let selectedIndex = -1; // Tracks current keyboard navigation selection
+  let selectedIndex = -1;
 
   window.onload = function() {
     addCommentaryRow();
@@ -213,7 +212,14 @@
     return result.join(' | ');
   }
 
+  /* --- FAST BATCH RENDER DATA --- */
   function fetchBooks() {
+    const loading = document.getElementById('loadingIndicator');
+    const table = document.getElementById('booksTable');
+    
+    loading.style.display = 'block';
+    table.style.display = 'none';
+
     fetch(SCRIPT_URL)
       .then(res => res.json())
       .then(data => {
@@ -221,38 +227,47 @@
 
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
-        head.innerHTML = '';
-        body.innerHTML = '';
 
         if (data && data.length > 0) {
-          data[0].forEach(col => { head.innerHTML += '<th>' + col + '</th>'; });
-          if (adminToken) { head.innerHTML += '<th>Actions</th>'; }
+          // Batch generate headers
+          let headHtml = '';
+          data[0].forEach(col => { headHtml += '<th>' + col + '</th>'; });
+          if (adminToken) { headHtml += '<th>Actions</th>'; }
+          head.innerHTML = headHtml;
 
+          // Batch generate rows using string buffer (much faster DOM paint)
+          let bodyHtml = '';
           for (let i = 1; i < data.length; i++) {
-            let rowHtml = '<tr>';
+            bodyHtml += '<tr>';
             data[i].forEach(cell => {
-              rowHtml += '<td>' + (cell !== undefined ? cell : '') + '</td>';
+              bodyHtml += '<td>' + (cell !== undefined ? cell : '') + '</td>';
             });
 
             if (adminToken) {
-              rowHtml += '<td>' +
+              bodyHtml += '<td>' +
                 '<button class="btn-edit" onclick="editBook(' + i + ')">Edit</button>' +
                 '<button class="btn-delete" onclick="deleteBook(' + (i + 1) + ')">Delete</button>' +
               '</td>';
             }
-            rowHtml += '</tr>';
-            body.innerHTML += rowHtml;
+            bodyHtml += '</tr>';
           }
+          body.innerHTML = bodyHtml;
         }
+
+        loading.style.display = 'none';
+        table.style.display = 'table';
       })
-      .catch(err => console.error("Error fetching books:", err));
+      .catch(err => {
+        loading.innerText = "⚠️ Failed to load catalog. Please refresh.";
+        console.error("Error fetching books:", err);
+      });
   }
 
-  /* --- FAST AUTO-COMPLETE WITH KEYBOARD NAVIGATION --- */
+  /* --- FAST AUTO-COMPLETE & KEYBOARD NAVIGATION --- */
   function onTitleInput(val) {
     const box = document.getElementById('titleSuggestions');
     const query = val.trim().toLowerCase();
-    selectedIndex = -1; // Reset selection index on new input
+    selectedIndex = -1;
 
     if (!query || !globalData || globalData.length <= 1) {
       box.style.display = 'none';
@@ -285,7 +300,6 @@
       item.innerHTML = `<strong>${row[1] || 'Untitled'}</strong> ${row[2] ? '(' + row[2] + ')' : ''}` +
                        `<div class="suggestion-meta">Author: ${row[4] || 'N/A'} | Publisher: ${row[9] || 'N/A'} | Lang: ${row[7] || 'N/A'}</div>`;
       
-      // Store full row data directly on the DOM element
       item.dataset.row = JSON.stringify(row);
 
       item.onclick = function() {
@@ -316,7 +330,7 @@
       updateActiveItem(items);
     } else if (e.key === 'Enter') {
       if (selectedIndex >= 0 && selectedIndex < items.length) {
-        e.preventDefault(); // Prevent accidental form submission
+        e.preventDefault();
         const selectedRow = JSON.parse(items[selectedIndex].dataset.row);
         populateFormFields(selectedRow);
         box.style.display = 'none';
@@ -379,7 +393,7 @@
     }
   });
 
-  /* --- FORM SUBMISSION & ADMIN ACTIONS --- */
+  /* --- FORM SUBMISSION WITH PREVENTED DOUBLE-SUBMIT --- */
   document.getElementById('addBookForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -388,6 +402,13 @@
       alert("Only administrators can edit entries.");
       return;
     }
+
+    const submitBtn = document.getElementById('submitBtn');
+    const originalText = submitBtn.innerText;
+
+    // Lock submit button immediately to prevent double clicks
+    submitBtn.disabled = true;
+    submitBtn.innerText = editRowIndex ? "⏳ Updating Book..." : "⏳ Saving Book...";
 
     const formData = {
       slNo: document.getElementById('slNo').value,
@@ -418,14 +439,19 @@
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        alert(editRowIndex ? 'Book updated!' : 'Book added successfully!');
+        alert(editRowIndex ? 'Book updated successfully!' : 'Book added successfully!');
         resetForm();
         fetchBooks();
       } else {
         alert("Error: " + res.message);
       }
     })
-    .catch(err => alert("Submission failed: " + err));
+    .catch(err => alert("Submission failed: " + err))
+    .finally(() => {
+      // Re-enable button after response completes
+      submitBtn.disabled = false;
+      submitBtn.innerText = originalText;
+    });
   });
 
   function editBook(index) {
