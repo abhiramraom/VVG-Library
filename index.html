@@ -14,7 +14,6 @@
     button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
     button:hover { background-color: #218838; }
     
-    /* Strict lock styling for disabled buttons */
     button:disabled { background-color: #a5d6a7 !important; color: #ffffff !important; cursor: not-allowed !important; pointer-events: none !important; opacity: 0.6; }
 
     .btn-admin { background-color: #007bff; width: auto; padding: 8px 16px; }
@@ -189,8 +188,6 @@
   let adminToken = null;
   let globalData = [];
   let selectedIndex = -1;
-  
-  // LOCK STATE TO PREVENT DOUBLE-SUBMISSION
   let isSubmitting = false;
 
   window.onload = function() {
@@ -308,6 +305,7 @@
       });
   }
 
+  /* --- SINGLE FIELD AUTOCOMPLETE ENGINE --- */
   function setupGlobalAutocomplete() {
     document.querySelectorAll('input[data-autocomplete="true"]').forEach(input => {
       input.addEventListener('input', function() {
@@ -332,30 +330,27 @@
       return;
     }
 
-    const matches = [];
+    // Extract unique values matching the query for this specific column
+    const matches = new Set();
     for (let i = 1; i < globalData.length; i++) {
-      const row = globalData[i];
-      const fieldValue = String(row[targetCol] || '').toLowerCase();
-
-      if (fieldValue.includes(query)) {
-        matches.push(row);
-        if (matches.length >= 8) break;
+      const fieldValue = String(globalData[i][targetCol] || '').trim();
+      if (fieldValue && fieldValue.toLowerCase().includes(query)) {
+        matches.add(fieldValue);
+        if (matches.size >= 8) break;
       }
     }
 
-    if (matches.length === 0) return;
+    if (matches.size === 0) return;
 
     box.innerHTML = '';
-    matches.forEach(row => {
+    matches.forEach(value => {
       const item = document.createElement('div');
       item.className = 'suggestion-item';
-      item.innerHTML = `<strong>${row[targetCol] || 'N/A'}</strong>` +
-                       `<div class="suggestion-meta">Title: ${row[1] || 'Untitled'} | Author: ${row[4] || 'N/A'} | Publisher: ${row[9] || 'N/A'}</div>`;
-      
-      item.dataset.row = JSON.stringify(row);
+      item.innerHTML = `<strong>${value}</strong>`;
+      item.dataset.value = value;
 
       item.onclick = function() {
-        populateFormFields(row);
+        inputElem.value = value;
         closeAllSuggestions();
       };
       box.appendChild(item);
@@ -384,8 +379,7 @@
     } else if (e.key === 'Enter') {
       if (selectedIndex >= 0 && selectedIndex < items.length) {
         e.preventDefault();
-        const selectedRow = JSON.parse(items[selectedIndex].dataset.row);
-        populateFormFields(selectedRow);
+        inputElem.value = items[selectedIndex].dataset.value;
         closeAllSuggestions();
       }
     } else if (e.key === 'Escape') {
@@ -411,6 +405,7 @@
     selectedIndex = -1;
   }
 
+  // Called only when selecting an entry from the table to edit
   function populateFormFields(row) {
     document.getElementById('title').value = row[1] || '';
     document.getElementById('titleEng').value = row[2] || '';
@@ -450,12 +445,10 @@
     }
   });
 
-  /* --- HARDENED SINGLE-SUBMISSION FORM HANDLER --- */
   document.getElementById('addBookForm').addEventListener('submit', function(e) {
     e.preventDefault();
     e.stopPropagation();
 
-    // 1. Immediately drop duplicate triggers if processing is underway
     if (isSubmitting) {
       return false;
     }
@@ -466,7 +459,6 @@
       return;
     }
 
-    // 2. Lock execution flag and disable DOM button
     isSubmitting = true;
     const submitBtn = document.getElementById('submitBtn');
     const originalText = submitBtn.innerText;
@@ -512,7 +504,6 @@
     })
     .catch(err => alert("Submission failed: " + err))
     .finally(() => {
-      // 3. Unlock submit flag and restore button only after request finishes
       isSubmitting = false;
       submitBtn.disabled = false;
       submitBtn.innerText = originalText;
