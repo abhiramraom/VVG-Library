@@ -349,10 +349,16 @@
       item.innerHTML = `<strong>${value}</strong>`;
       item.dataset.value = value;
 
-      item.onclick = function() {
+      // Intercept selection before blur and isolate to current field
+      item.onmousedown = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
         inputElem.value = value;
         closeAllSuggestions();
+        return false;
       };
+
       box.appendChild(item);
     });
 
@@ -379,6 +385,7 @@
     } else if (e.key === 'Enter') {
       if (selectedIndex >= 0 && selectedIndex < items.length) {
         e.preventDefault();
+        e.stopPropagation(); // Stop Enter key from submitting form or firing other listeners
         inputElem.value = items[selectedIndex].dataset.value;
         closeAllSuggestions();
       }
