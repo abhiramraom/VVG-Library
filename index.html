@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Personal Library Management System</title>
-  <!-- QuaggaJS for Camera Barcode Scanning -->
+  <!-- QuaggaJS Fallback Engine -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
@@ -15,7 +15,6 @@
     input, select, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
     button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
     button:hover { background-color: #218838; }
-    
     button:disabled { background-color: #a5d6a7 !important; color: #ffffff !important; cursor: not-allowed !important; pointer-events: none !important; opacity: 0.6; }
 
     .btn-admin { background-color: #007bff; width: auto; padding: 8px 16px; }
@@ -68,21 +67,24 @@
       background-color: #007bff;
       color: #ffffff;
     }
-    .suggestion-item strong { color: #007bff; }
-    .suggestion-item:hover strong, .suggestion-item.active strong { color: #ffffff; }
     
     .loading-spinner { font-weight: bold; color: #007bff; padding: 15px; text-align: center; }
 
-    /* Scanner Modal Styles */
+    /* Scanner Overlay Modal */
     #scannerModal {
       display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%;
-      background-color: rgba(0,0,0,0.7); justify-content: center; align-items: center;
+      background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; flex-direction: column;
     }
     .scanner-content {
       background: white; padding: 20px; border-radius: 8px; text-align: center; max-width: 500px; width: 90%;
     }
-    #interactive.viewport { width: 100%; height: 300px; position: relative; overflow: hidden; }
-    #interactive.viewport canvas, #interactive.viewport video { width: 100%; height: 100%; object-fit: cover; }
+    #interactive.viewport, #nativeVideoWrapper {
+      width: 100%; height: 280px; position: relative; overflow: hidden; background: #000; border-radius: 4px;
+    }
+    #interactive.viewport canvas, #interactive.viewport video, #nativeVideo {
+      width: 100%; height: 100%; object-fit: cover;
+    }
+    .scanner-status { margin-top: 10px; font-weight: bold; color: #007bff; font-size: 14px; }
 
     /* Print Styles */
     @media print {
@@ -116,7 +118,7 @@
         <input type="text" id="slNo" placeholder="Sl. No (Auto-generated)" disabled>
         
         <div class="autocomplete-wrapper">
-          <input type="text" id="title" data-col="1" data-autocomplete="true" placeholder="Title (Original) - Type to search..." required>
+          <input type="text" id="title" data-col="1" data-autocomplete="true" placeholder="Title (Original)" required>
           <div class="suggestions-box"></div>
         </div>
 
@@ -160,10 +162,10 @@
           <div class="suggestions-box"></div>
         </div>
 
-        <!-- ISBN input with auto-fetch and Scanner integration -->
+        <!-- ISBN Barcode Scanner -->
         <div class="autocomplete-wrapper" style="display: flex; gap: 5px;">
-          <input type="text" id="isbn" data-col="11" data-autocomplete="true" placeholder="ISBN or ISSN (Scan or Type)" onchange="fetchMetadataByISBN(this.value)">
-          <button type="button" class="btn-feature" title="Scan with Camera" onclick="startCameraScanner()">📷</button>
+          <input type="text" id="isbn" data-col="11" data-autocomplete="true" placeholder="ISBN (Scan or Type)" onchange="fetchMetadataByISBN(this.value)">
+          <button type="button" class="btn-feature" title="Scan Barcode via Camera" onclick="openBarcodeScanner()">📷 Scan</button>
           <div class="suggestions-box"></div>
         </div>
 
@@ -215,13 +217,19 @@
     </div>
   </div>
 
-  <!-- Camera Barcode Scanner Modal -->
+  <!-- Camera Scanner Modal -->
   <div id="scannerModal">
     <div class="scanner-content">
-      <h3>Position Barcode in Camera View</h3>
-      <div id="interactive" class="viewport"></div>
+      <h3 style="margin-top:0;">Position ISBN Barcode in View</h3>
+      
+      <div id="nativeVideoWrapper" style="display:none;">
+        <video id="nativeVideo" autoplay playsinline></video>
+      </div>
+      <div id="interactive" class="viewport" style="display:none;"></div>
+
+      <div id="scannerStatus" class="scanner-status">Initializing Camera...</div>
       <br>
-      <button type="button" class="btn-remove" onclick="stopCameraScanner()">Cancel</button>
+      <button type="button" class="btn-remove" onclick="closeBarcodeScanner()">Close Scanner</button>
     </div>
   </div>
 
@@ -232,6 +240,10 @@
   let globalData = [];
   let selectedIndex = -1;
   let isSubmitting = false;
+
+  // Scanner Variables
+  let nativeStream = null;
+  let nativeScanInterval = null;
 
   window.onload = function() {
     addCommentaryRow();
@@ -303,7 +315,6 @@
   function fetchBooks() {
     const loading = document.getElementById('loadingIndicator');
     const table = document.getElementById('booksTable');
-    
     loading.style.display = 'block';
     table.style.display = 'none';
 
@@ -311,7 +322,6 @@
       .then(res => res.json())
       .then(data => {
         globalData = data;
-
         const head = document.getElementById('tableHead');
         const body = document.getElementById('tableBody');
 
@@ -343,18 +353,18 @@
         table.style.display = 'table';
       })
       .catch(err => {
-        loading.innerText = "⚠️ Failed to load catalog. Please refresh.";
+        loading.innerText = "⚠️ Failed to load catalog. Refresh page.";
         console.error("Error fetching books:", err);
       });
   }
 
-  /* --- ISBN AUTO-METADATA FETCHING (Open Library API) --- */
+  /* --- ISBN AUTO-METADATA LOOKUP (Open Library API) --- */
   function fetchMetadataByISBN(isbnRaw) {
     const isbn = isbnRaw.replace(/[^0-9X]/gi, '');
-    if (!isbn || isbn.length < 10) return;
+    if (!isbn || (isbn.length !== 10 && isbn.length !== 13)) return;
 
     const submitBtn = document.getElementById('submitBtn');
-    submitBtn.innerText = "⏳ Fetching book details from Open Library...";
+    submitBtn.innerText = "⏳ Fetching Book Details from Open Library...";
 
     fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`)
       .then(res => res.json())
@@ -377,52 +387,140 @@
           }
         }
       })
-      .catch(err => console.warn("ISBN lookup failed:", err))
+      .catch(err => console.warn("ISBN Fetch error:", err))
       .finally(() => {
         const editRowIndex = document.getElementById('editRowIndex').value;
         submitBtn.innerText = editRowIndex ? 'Update Book Info' : 'Add Book to Library';
       });
   }
 
-  /* --- CAMERA BARCODE SCANNER (QuaggaJS) --- */
-  function startCameraScanner() {
+  /* --- HYBRID BARCODE SCANNER ENGINE (Native + Strict Fallback) --- */
+  function openBarcodeScanner() {
     document.getElementById('scannerModal').style.display = 'flex';
+    document.getElementById('scannerStatus').innerText = "Starting camera...";
+
+    if ('BarcodeDetector' in window) {
+      startNativeScanner();
+    } else {
+      startStrictQuaggaScanner();
+    }
+  }
+
+  function handleSuccessfulScan(rawCode) {
+    const code = rawCode.trim();
+    // Validate EAN-13 ISBN prefixes (978 / 979) or valid 10-digit ISBN
+    if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
+      document.getElementById('isbn').value = code;
+      fetchMetadataByISBN(code);
+      closeBarcodeScanner();
+    } else if (code.length === 10) {
+      document.getElementById('isbn').value = code;
+      fetchMetadataByISBN(code);
+      closeBarcodeScanner();
+    } else {
+      document.getElementById('scannerStatus').innerText = `⚠️ Scanned non-ISBN barcode (${code}). Try again.`;
+    }
+  }
+
+  /* 1. NATIVE BROWSER DETECTOR (Chrome/Edge/Android) */
+  async function startNativeScanner() {
+    document.getElementById('nativeVideoWrapper').style.display = 'block';
+    document.getElementById('interactive').style.display = 'none';
+    const video = document.getElementById('nativeVideo');
+
+    try {
+      nativeStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+      });
+      video.srcObject = nativeStream;
+
+      const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] });
+      document.getElementById('scannerStatus').innerText = "Native Detector Ready. Align barcode...";
+
+      nativeScanInterval = setInterval(async () => {
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+          try {
+            const barcodes = await barcodeDetector.detect(video);
+            if (barcodes.length > 0) {
+              handleSuccessfulScan(barcodes[0].rawValue);
+            }
+          } catch (e) { console.error(e); }
+        }
+      }, 200);
+
+    } catch (err) {
+      console.warn("Native camera failed, falling back to engine:", err);
+      startStrictQuaggaScanner();
+    }
+  }
+
+  /* 2. STRICT QUAGGA FALLBACK ENGINE (Safari / Firefox) */
+  function startStrictQuaggaScanner() {
+    document.getElementById('nativeVideoWrapper').style.display = 'none';
+    document.getElementById('interactive').style.display = 'block';
+    document.getElementById('scannerStatus').innerText = "Align ISBN Barcode inside window...";
+
     Quagga.init({
       inputStream: {
         name: "Live",
         type: "LiveStream",
         target: document.querySelector('#interactive'),
-        constraints: { facingMode: "environment" }
+        constraints: { facingMode: "environment", focusMode: "continuous" }
       },
-      decoder: { readers: ["ean_reader", "ean_8_reader", "code_128_reader"] }
+      // Restrict strictly to EAN-13 to prevent misreads
+      decoder: { readers: ["ean_reader"], multiple: false },
+      locate: true
     }, function(err) {
       if (err) {
-        alert("Camera access error: " + err);
-        stopCameraScanner();
+        alert("Camera permission denied or unavailable.");
+        closeBarcodeScanner();
         return;
       }
       Quagga.start();
     });
 
+    let lastCode = "";
+    let matchCount = 0;
+
     Quagga.onDetected(function(result) {
       if (result && result.codeResult && result.codeResult.code) {
-        const scannedCode = result.codeResult.code;
-        document.getElementById('isbn').value = scannedCode;
-        fetchMetadataByISBN(scannedCode);
-        stopCameraScanner();
+        const code = result.codeResult.code;
+
+        // Verify checked length and ISBN prefixes
+        if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
+          if (code === lastCode) {
+            matchCount++;
+          } else {
+            lastCode = code;
+            matchCount = 1;
+          }
+
+          // Require 3 consecutive identical reads to guarantee 100% accuracy
+          if (matchCount >= 3) {
+            handleSuccessfulScan(code);
+          }
+        }
       }
     });
   }
 
-  function stopCameraScanner() {
-    Quagga.stop();
+  function closeBarcodeScanner() {
+    if (nativeScanInterval) clearInterval(nativeScanInterval);
+    if (nativeStream) {
+      nativeStream.getTracks().forEach(track => track.stop());
+      nativeStream = null;
+    }
+    try { Quagga.stop(); } catch(e){}
+
     document.getElementById('scannerModal').style.display = 'none';
+    document.getElementById('nativeVideoWrapper').style.display = 'none';
+    document.getElementById('interactive').style.display = 'none';
   }
 
-  /* --- CSV EXPORT --- */
+  /* --- EXPORT CSV --- */
   function exportToCSV() {
     if (!globalData || globalData.length === 0) {
-      alert("No library data available to export.");
+      alert("No data to export.");
       return;
     }
     let csvContent = "data:text/csv;charset=utf-8,";
@@ -440,7 +538,7 @@
     document.body.removeChild(link);
   }
 
-  /* --- SINGLE FIELD AUTOCOMPLETE ENGINE --- */
+  /* --- AUTOCOMPLETE ENGINE --- */
   function setupGlobalAutocomplete() {
     document.querySelectorAll('input[data-autocomplete="true"]').forEach(input => {
       input.addEventListener('input', function() { handleFieldInput(this); });
@@ -479,12 +577,9 @@
 
       item.onmousedown = function(e) {
         e.preventDefault();
-        e.stopPropagation();
         inputElem.value = value;
         closeAllSuggestions();
-        return false;
       };
-
       box.appendChild(item);
     });
 
@@ -500,18 +595,15 @@
 
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      selectedIndex++;
-      if (selectedIndex >= items.length) selectedIndex = 0;
+      selectedIndex = (selectedIndex + 1) % items.length;
       updateActiveItem(items);
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      selectedIndex--;
-      if (selectedIndex < 0) selectedIndex = items.length - 1;
+      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
       updateActiveItem(items);
     } else if (e.key === 'Enter') {
       if (selectedIndex >= 0 && selectedIndex < items.length) {
         e.preventDefault();
-        e.stopPropagation();
         inputElem.value = items[selectedIndex].dataset.value;
         closeAllSuggestions();
       }
@@ -521,8 +613,8 @@
   }
 
   function updateActiveItem(items) {
-    items.forEach((item, index) => {
-      if (index === selectedIndex) {
+    items.forEach((item, idx) => {
+      if (idx === selectedIndex) {
         item.classList.add('active');
         item.scrollIntoView({ block: 'nearest' });
       } else {
@@ -575,8 +667,6 @@
 
   document.getElementById('addBookForm').addEventListener('submit', function(e) {
     e.preventDefault();
-    e.stopPropagation();
-
     if (isSubmitting) return false;
 
     const editRowIndex = document.getElementById('editRowIndex').value;
@@ -590,7 +680,7 @@
     const originalText = submitBtn.innerText;
 
     submitBtn.disabled = true;
-    submitBtn.innerText = editRowIndex ? "⏳ Updating Book..." : "⏳ Saving Book...";
+    submitBtn.innerText = editRowIndex ? "⏳ Updating..." : "⏳ Saving...";
 
     const formData = {
       slNo: document.getElementById('slNo').value,
@@ -621,7 +711,7 @@
     .then(res => res.json())
     .then(res => {
       if (res.success) {
-        alert(editRowIndex ? 'Book updated successfully!' : 'Book added successfully!');
+        alert(editRowIndex ? 'Book updated!' : 'Book added!');
         resetForm();
         fetchBooks();
       } else {
@@ -637,7 +727,7 @@
   });
 
   function editBook(index) {
-    if (!adminToken) { alert("Unauthorized access."); return; }
+    if (!adminToken) { alert("Unauthorized."); return; }
     const row = globalData[index];
     document.getElementById('editRowIndex').value = index;
     document.getElementById('slNo').value = row[0] || '';
@@ -662,8 +752,8 @@
   }
 
   function deleteBook(rowIndex) {
-    if (!adminToken) { alert("Unauthorized access."); return; }
-    if (confirm('Are you sure you want to delete this book entry?')) {
+    if (!adminToken) { alert("Unauthorized."); return; }
+    if (confirm('Delete this book entry?')) {
       fetch(SCRIPT_URL, {
         method: 'POST',
         body: JSON.stringify({ action: 'delete', adminToken: adminToken, rowIndex: rowIndex })
