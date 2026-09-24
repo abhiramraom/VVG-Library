@@ -1,244 +1,1129 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <base target="_top">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Library Cataloging System</title>
+  
+  <!-- QuaggaJS Barcode Fallback -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; color: #333; }
-    .container { max-width: 850px; margin: 0 auto; background: white; padding: 25px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h2, h3 { color: #2c3e50; }
-    .section { margin-bottom: 25px; padding: 15px; border: 1px solid #e0e0e0; border-radius: 6px; }
-    label { display: block; margin-top: 10px; font-weight: bold; }
-    select, input, textarea, button { width: 100%; padding: 10px; margin-top: 5px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    button { background-color: #3498db; color: white; border: none; cursor: pointer; font-weight: bold; margin-top: 15px; }
-    button:hover { background-color: #2980b9; }
-    .btn-secondary { background-color: #7f8c8d; }
-    .btn-secondary:hover { background-color: #6c757d; }
-    .btn-danger { background-color: #e74c3c; }
-    .btn-danger:hover { background-color: #c0392b; }
-    .inline-group { display: flex; gap: 10px; align-items: center; }
-    .inline-group select { flex: 1; }
-    .inline-group button { width: auto; margin-top: 5px; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f6f9;
+      color: #333;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2c3e50;
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .header-bar h1 { margin: 0; font-size: 22px; }
+    .badge {
+      font-size: 13px;
+      background: #34495e;
+      padding: 5px 12px;
+      border-radius: 12px;
+      margin-left: 8px;
+    }
     
-    /* Modal styles for User Management */
-    .modal { display: none; position: fixed; z-index: 100; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-    .modal-content { background: white; margin: 10% auto; padding: 20px; width: 400px; border-radius: 8px; }
-    .close { float: right; font-size: 20px; cursor: pointer; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #eef2f5;
+      padding-bottom: 8px;
+      color: #2c3e50;
+    }
+
+    /* Progress Stats Dashboard */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #3498db;
+      border-radius: 6px;
+      padding: 12px 15px;
+    }
+    .stat-card .user-name { font-weight: 600; color: #2c3e50; margin-bottom: 4px; }
+    .stat-card .count { font-size: 22px; font-weight: bold; color: #27ae60; }
+    .stat-card .quota { font-size: 12px; color: #7f8c8d; }
+
+    /* Form Layout */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #4a5568;
+    }
+    input, select {
+      padding: 10px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+
+    /* Commentaries Rows */
+    .commentary-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+    .commentary-row input { flex: 1; }
+    
+    /* Buttons */
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: #27ae60; color: #fff; }
+    .btn-primary:hover { background: #219653; }
+    .btn-secondary { background: #3498db; color: #fff; }
+    .btn-secondary:hover { background: #2980b9; }
+    .btn-danger { background: #e74c3c; color: #fff; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-outline { background: transparent; border: 1px solid #fff; color: #fff; }
+    .btn-outline:hover { background: rgba(255,255,255,0.1); }
+    .btn-remove { background: #e74c3c; color: #fff; border: none; border-radius: 4px; padding: 0 12px; cursor: pointer; }
+
+    /* Autocomplete Box */
+    .autocomplete-wrapper { position: relative; }
+    .suggestions-box {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #fff;
+      border: 1px solid #cbd5e0;
+      border-top: none;
+      border-radius: 0 0 6px 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    .suggestion-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .suggestion-item:hover, .suggestion-item.active {
+      background: #ebf8ff;
+      color: #2b6cb0;
+    }
+
+    /* Table & Controls */
+    .table-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .table-controls input, .table-controls select {
+      flex: 1;
+      min-width: 150px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 500px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    th {
+      background: #f7fafc;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      color: #4a5568;
+    }
+    tr:hover { background: #f8fafc; }
+    
+    .btn-edit { background: #f39c12; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px; }
+    .btn-delete { background: #e74c3c; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
+
+    /* Barcode Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
+    }
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+    }
+    #interactive video, #nativeVideo {
+      width: 100%;
+      max-height: 300px;
+      border-radius: 6px;
+      background: #000;
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h2>Library Progress & User Management</h2>
-
-  <!-- USER SELECTION & MANAGEMENT SECTION -->
-  <div class="section">
-    <h3>Select User</h3>
-    <label for="userSelect">Active User:</label>
-    <div class="inline-group">
-      <select id="userSelect">
-        <option value="">-- Select User --</option>
-      </select>
-      <button onclick="openUserModal('add')">Add</button>
-      <button class="btn-secondary" onclick="editSelectedUser()">Edit</button>
-      <button class="btn-danger" onclick="deleteSelectedUser()">Delete</button>
+  <!-- Header -->
+  <div class="header-bar">
+    <div>
+      <h1 style="display:inline-block;">📚 Library Cataloging Portal</h1>
+      <span id="roleBadge" class="badge">Role: Standard User</span>
+      <span id="userBadge" class="badge" style="background:#27ae60; display:none;">Logged in as: -</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button id="userLoginBtn" class="btn btn-outline" onclick="loginUser()">Cataloguer Login</button>
+      <button id="userLogoutBtn" class="btn btn-outline" onclick="logoutUser()" style="display:none;">Change Cataloguer</button>
+      <button id="adminLoginBtn" class="btn btn-outline" onclick="toggleAdminLogin()">Admin Login</button>
+      <button id="adminLogoutBtn" class="btn btn-outline" onclick="logoutAdmin()" style="display:none;">Logout Admin</button>
     </div>
   </div>
 
-  <!-- PROGRESS REPORT SECTION -->
-  <div class="section">
-    <h3>Submit Progress Report</h3>
-    
-    <label for="bookSelect">Select Book:</label>
-    <select id="bookSelect" onchange="updateConditionField()">
-      <option value="">-- Select Book --</option>
-    </select>
-
-    <label for="bookCondition">Book Condition (From Sheet):</label>
-    <select id="bookCondition">
-      <option value="A">A - Excellent / Like New</option>
-      <option value="B">B - Good / Moderate Wear</option>
-      <option value="C">C - Fair / Significant Wear</option>
-    </select>
-
-    <label for="readingProgress">Progress / Pages Read:</label>
-    <input type="text" id="readingProgress" placeholder="e.g., Chapter 4, or Page 50-75">
-
-    <label for="reportNotes">Notes / Feedback:</label>
-    <textarea id="reportNotes" rows="3" placeholder="Enter progress notes here..."></textarea>
-
-    <button onclick="submitProgress()">Save Progress Report</button>
+  <!-- Daily Progress Dashboard -->
+  <div class="card">
+    <div class="card-title">📊 Today's Progress Report</div>
+    <div id="progressStats" class="stats-grid">
+      <div style="color: #7f8c8d; font-style: italic;">Loading daily progress statistics...</div>
+    </div>
   </div>
-</div>
 
-<!-- USER MANAGEMENT MODAL -->
-<div id="userModal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeUserModal()">&times;</span>
-    <h3 id="modalTitle">Add User</h3>
-    <input type="hidden" id="modalUserId">
-    
-    <label for="modalUserName">Full Name:</label>
-    <input type="text" id="modalUserName" placeholder="Enter full name">
-    
-    <label for="modalUserContact">Email / Contact:</label>
-    <input type="text" id="modalUserContact" placeholder="Enter contact info">
-    
-    <button onclick="saveUserFromModal()">Save User</button>
+  <!-- Book Entry Form -->
+  <div class="card">
+    <div class="card-title" id="formTitle">Add New Book Entry</div>
+
+    <form id="addBookForm">
+      <input type="hidden" id="editRowIndex" value="">
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="slNo">Serial No. (Auto-assigned)</label>
+          <input type="text" id="slNo" placeholder="Auto" readonly style="background: #edf2f7;">
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="title">Book Title (Original Script / Devanagari) *</label>
+          <input type="text" id="title" required data-autocomplete="true" data-col="1" placeholder="e.g. श्रीमद्भगवद्गीता">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="titleEng">Book Title (English / Transliterated)</label>
+          <input type="text" id="titleEng" data-autocomplete="true" data-col="2" placeholder="e.g. Srimad Bhagavad Gita">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="subTitle">Subtitle</label>
+          <input type="text" id="subTitle" placeholder="Subtitle if any">
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="author">Author *</label>
+          <input type="text" id="author" required data-autocomplete="true" data-col="4" placeholder="e.g. Veda Vyasa">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="editor">Editor / Translator</label>
+          <input type="text" id="editor" data-autocomplete="true" data-col="5" placeholder="e.g. Swami Gambhirananda">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <!-- Commentaries Section -->
+        <div class="form-group full-width">
+          <label>Linked Commentaries & Authors</label>
+          <div id="commentaryContainer"></div>
+          <button type="button" class="btn btn-secondary" style="width: fit-content; margin-top: 5px; font-size: 12px; padding: 6px 12px;" onclick="addCommentaryRow()">+ Add Another Commentary</button>
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="lang">Language *</label>
+          <input type="text" id="lang" required data-autocomplete="true" data-col="7" placeholder="e.g. Sanskrit, Kannada, English">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="vol">Volume / Part No.</label>
+          <input type="text" id="vol" placeholder="e.g. Vol 1, Part II">
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="publisher">Publisher</label>
+          <input type="text" id="publisher" data-autocomplete="true" data-col="9" placeholder="e.g. Gita Press">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="year">Publication Year</label>
+          <input type="text" id="year" placeholder="e.g. 1998">
+        </div>
+
+        <div class="form-group">
+          <label for="isbn">ISBN (Scan or Type)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="isbn" style="flex: 1;" placeholder="10 or 13 digit ISBN" onchange="checkAndFetchISBN(this.value)">
+            <button type="button" class="btn btn-secondary" onclick="openBarcodeScanner()">📷 Scan</button>
+          </div>
+        </div>
+
+        <!-- Swapped e.g. values as requested -->
+        <div class="form-group autocomplete-wrapper">
+          <label for="topic">Topic / Category *</label>
+          <input type="text" id="topic" required data-autocomplete="true" data-col="12" placeholder="e.g. Advaita, Prasthanatrayi">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="subject">Subject Details</label>
+          <input type="text" id="subject" data-autocomplete="true" data-col="13" placeholder="e.g. Vedanta, Nyaya, Kavya">
+          <div class="suggestions-box"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="condition">Physical Condition</label>
+          <select id="condition">
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="Damaged">Damaged</option>
+            <option value="Needs Binding">Needs Binding</option>
+          </select>
+        </div>
+
+        <!-- Logged in Cataloguer Field (Auto-filled once logged in) -->
+        <div class="form-group autocomplete-wrapper">
+          <label for="createdBy">Cataloguer Name *</label>
+          <input type="text" id="createdBy" required data-autocomplete="true" data-col="15" placeholder="Login or enter name">
+          <div class="suggestions-box"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button type="submit" id="submitBtn" class="btn btn-primary">Add Book to Library</button>
+        <button type="button" id="cancelBtn" class="btn btn-danger" style="display: none;" onclick="resetForm()">Cancel Edit</button>
+      </div>
+    </form>
   </div>
-</div>
 
-<script>
-  let loadedBooks = [];
-  let loadedUsers = [];
+  <!-- Catalog View Table -->
+  <div class="card">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;" class="card-title">
+      <span>📖 Library Catalog Records</span>
+      <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="exportToCSV()">📥 Export to CSV</button>
+    </div>
 
-  window.onload = function() {
-    loadData();
-  };
+    <div class="table-controls">
+      <input type="text" id="searchBox" placeholder="🔍 Search titles, authors, keywords..." onkeyup="filterBooks()">
+      <select id="filterLang" onchange="filterBooks()">
+        <option value="">All Languages</option>
+      </select>
+      <select id="filterTopic" onchange="filterBooks()">
+        <option value="">All Topics</option>
+      </select>
+      <select id="filterCond" onchange="filterBooks()">
+        <option value="">All Conditions</option>
+        <option value="Good">Good</option>
+        <option value="Fair">Fair</option>
+        <option value="Damaged">Damaged</option>
+        <option value="Needs Binding">Needs Binding</option>
+      </select>
+    </div>
 
-  function loadData() {
-    google.script.run.withSuccessHandler(function(data) {
-      loadedBooks = data.books;
-      loadedUsers = data.users;
-      
-      populateUserDropdown();
-      populateBookDropdown();
-    }).getInitialData();
-  }
+    <div id="loadingIndicator" style="text-align: center; padding: 30px; color: #7f8c8d;">
+      ⏳ Loading catalog data from Google Sheets...
+    </div>
 
-  // Populate Users Dropdown
-  function populateUserDropdown() {
-    const userSelect = document.getElementById('userSelect');
-    userSelect.innerHTML = '<option value="">-- Select User --</option>';
-    loadedUsers.forEach(user => {
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = user.name + (user.contact ? ` (${user.contact})` : '');
-      userSelect.appendChild(option);
-    });
-  }
+    <div class="table-wrapper">
+      <table id="booksTable" style="display: none;">
+        <thead><tr id="tableHead"></tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
 
-  // Populate Books Dropdown
-  function populateBookDropdown() {
-    const bookSelect = document.getElementById('bookSelect');
-    bookSelect.innerHTML = '<option value="">-- Select Book --</option>';
-    loadedBooks.forEach(book => {
-      const option = document.createElement('option');
-      option.value = book.id;
-      option.textContent = `${book.title} [Condition: ${book.condition}]`;
-      bookSelect.appendChild(option);
-    });
-  }
+  <!-- Barcode Scanner Modal -->
+  <div id="scannerModal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">Scan Book Barcode</h3>
+      <div id="nativeVideoWrapper" style="display:none;">
+        <video id="nativeVideo" autoplay playsinline muted></video>
+      </div>
+      <div id="interactive" class="viewport"></div>
+      <p id="scannerStatus" style="font-size: 13px; color: #555; margin-top: 10px;">Initializing camera...</p>
+      <button class="btn btn-danger" style="margin-top: 10px;" onclick="closeBarcodeScanner()">Close Camera</button>
+    </div>
+  </div>
 
-  // Auto-set condition based on selected book
-  function updateConditionField() {
-    const bookId = document.getElementById('bookSelect').value;
-    const selectedBook = loadedBooks.find(b => b.id == bookId);
-    if (selectedBook && selectedBook.condition) {
-      const condSelect = document.getElementById('bookCondition');
-      // Set select value directly to A, B, or C
-      condSelect.value = selectedBook.condition.trim().toUpperCase();
-    }
-  }
+  <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydUNQacZxE91f6IC6vuQlZsVGGUj8-mFdwuzU2Hpw1CRjFq7DNWZT2hWyIelmYErxU/exec';
+    const DAILY_QUOTA_PER_USER = 30;
 
-  // User Management Functions
-  function openUserModal(mode) {
-    document.getElementById('userModal').style.display = 'block';
-    if (mode === 'add') {
-      document.getElementById('modalTitle').innerText = 'Add New User';
-      document.getElementById('modalUserId').value = '';
-      document.getElementById('modalUserName').value = '';
-      document.getElementById('modalUserContact').value = '';
-    }
-  }
+    let adminToken = null;
+    let loggedInUser = null;
+    let globalData = [];
+    let selectedIndex = -1;
+    let isSubmitting = false;
 
-  function closeUserModal() {
-    document.getElementById('userModal').style.display = 'none';
-  }
+    let nativeStream = null;
+    let nativeScanInterval = null;
 
-  function editSelectedUser() {
-    const userId = document.getElementById('userSelect').value;
-    if (!userId) {
-      alert('Please select a user to edit.');
-      return;
-    }
-    const user = loadedUsers.find(u => u.id == userId);
-    if (user) {
-      document.getElementById('modalTitle').innerText = 'Edit User';
-      document.getElementById('modalUserId').value = user.id;
-      document.getElementById('modalUserName').value = user.name;
-      document.getElementById('modalUserContact').value = user.contact;
-      document.getElementById('userModal').style.display = 'block';
-    }
-  }
+    window.onload = function() {
+      // Restore logged-in user session
+      const savedUser = localStorage.getItem('cataloguer_name');
+      if (savedUser) {
+        setLoggedInUser(savedUser);
+      } else {
+        // Prompt user login on first load
+        loginUser();
+      }
 
-  function saveUserFromModal() {
-    const userId = document.getElementById('modalUserId').value;
-    const name = document.getElementById('modalUserName').value.trim();
-    const contact = document.getElementById('modalUserContact').value.trim();
+      // Restore saved Admin Token across refreshes
+      const savedAdminToken = sessionStorage.getItem('adminToken');
+      if (savedAdminToken) {
+        adminToken = savedAdminToken;
+        updateAdminUI(true);
+      } else {
+        updateAdminUI(false);
+      }
 
-    if (!name) {
-      alert('Please enter a user name.');
-      return;
-    }
-
-    const userObj = { id: userId, name: name, contact: contact };
-
-    google.script.run.withSuccessHandler(function() {
-      closeUserModal();
-      loadData(); // Refresh UI
-    }).saveUser(userObj);
-  }
-
-  function deleteSelectedUser() {
-    const userId = document.getElementById('userSelect').value;
-    if (!userId) {
-      alert('Please select a user to delete.');
-      return;
-    }
-
-    if (confirm('Are you sure you want to delete this user?')) {
-      google.script.run.withSuccessHandler(function() {
-        loadData(); // Refresh UI
-      }).deleteUser(userId);
-    }
-  }
-
-  // Progress Report Submission
-  function submitProgress() {
-    const userId = document.getElementById('userSelect').value;
-    const bookId = document.getElementById('bookSelect').value;
-    const condition = document.getElementById('bookCondition').value;
-    const progress = document.getElementById('readingProgress').value;
-    const notes = document.getElementById('reportNotes').value;
-
-    if (!userId) {
-      alert('Please select a user.');
-      return;
-    }
-    if (!bookId) {
-      alert('Please select a book.');
-      return;
-    }
-
-    const selectedUser = loadedUsers.find(u => u.id == userId);
-    const selectedBook = loadedBooks.find(b => b.id == bookId);
-
-    const reportData = {
-      userId: userId,
-      userName: selectedUser ? selectedUser.name : '',
-      bookTitle: selectedBook ? selectedBook.title : '',
-      condition: condition, // A, B, or C
-      progress: progress,
-      notes: notes
+      addCommentaryRow();
+      fetchBooks();
+      setupGlobalAutocomplete();
     };
 
-    google.script.run.withSuccessHandler(function() {
-      alert('Progress report saved successfully!');
-      document.getElementById('readingProgress').value = '';
-      document.getElementById('reportNotes').value = '';
-    }).saveProgressReport(reportData);
-  }
-</script>
+    function loginUser() {
+      const name = prompt("Enter your Cataloguer Name to log in:", loggedInUser || "");
+      if (name && name.trim()) {
+        setLoggedInUser(name.trim());
+      }
+    }
 
+    function setLoggedInUser(name) {
+      loggedInUser = name;
+      localStorage.setItem('cataloguer_name', name);
+      
+      const createdByInput = document.getElementById('createdBy');
+      createdByInput.value = name;
+      createdByInput.readOnly = true;
+      createdByInput.style.backgroundColor = "#edf2f7";
+
+      const userBadge = document.getElementById('userBadge');
+      userBadge.innerText = `Logged in: ${name}`;
+      userBadge.style.display = 'inline-block';
+
+      document.getElementById('userLoginBtn').style.display = 'none';
+      document.getElementById('userLogoutBtn').style.display = 'inline-block';
+    }
+
+    function logoutUser() {
+      if (confirm("Switch cataloguer profile?")) {
+        localStorage.removeItem('cataloguer_name');
+        loggedInUser = null;
+        
+        const createdByInput = document.getElementById('createdBy');
+        createdByInput.value = "";
+        createdByInput.readOnly = false;
+        createdByInput.style.backgroundColor = "#fff";
+
+        document.getElementById('userBadge').style.display = 'none';
+        document.getElementById('userLoginBtn').style.display = 'inline-block';
+        document.getElementById('userLogoutBtn').style.display = 'none';
+
+        loginUser();
+      }
+    }
+
+    function toggleAdminLogin() {
+      const pwd = prompt("Enter Admin Password:");
+      if (!pwd) return;
+
+      fetch(SCRIPT_URL, {
+        method: 'POST',
+        body: JSON.stringify({ action: 'login', password: pwd })
+      })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          adminToken = res.token;
+          sessionStorage.setItem('adminToken', adminToken);
+          alert("Admin mode activated!");
+          updateAdminUI(true);
+        } else {
+          alert("Incorrect Password!");
+        }
+      })
+      .catch(err => alert("Connection error: " + err));
+    }
+
+    function logoutAdmin() {
+      adminToken = null;
+      sessionStorage.removeItem('adminToken');
+      alert("Logged out of Admin mode.");
+      updateAdminUI(false);
+      resetForm();
+    }
+
+    function updateAdminUI(isAdmin) {
+      document.getElementById('roleBadge').innerText = isAdmin ? 'Role: Administrator' : 'Role: Standard User';
+      document.getElementById('adminLoginBtn').style.display = isAdmin ? 'none' : 'inline-block';
+      document.getElementById('adminLogoutBtn').style.display = isAdmin ? 'inline-block' : 'none';
+      
+      if (globalData && globalData.length > 0) {
+        renderTableData(globalData);
+      }
+    }
+
+    function addCommentaryRow(name, author) {
+      name = name || '';
+      author = author || '';
+      const container = document.getElementById('commentaryContainer');
+      const div = document.createElement('div');
+      div.className = 'commentary-row';
+      div.innerHTML = '<input type="text" class="comm-name" placeholder="Commentary Title" value="' + name + '">' +
+                      '<input type="text" class="comm-author" placeholder="Author of Commentary" value="' + author + '">' +
+                      '<button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>';
+      container.appendChild(div);
+    }
+
+    function getLinkedCommentaries() {
+      const names = document.querySelectorAll('.comm-name');
+      const authors = document.querySelectorAll('.comm-author');
+      let result = [];
+      names.forEach((elem, idx) => {
+        const commName = elem.value.trim();
+        const commAuthor = authors[idx].value.trim();
+        if (commName || commAuthor) {
+          result.push((commName || 'Untitled') + ' (Author: ' + (commAuthor || 'Unknown') + ')');
+        }
+      });
+      return result.join(' | ');
+    }
+
+    function fetchBooks() {
+      const loading = document.getElementById('loadingIndicator');
+      const table = document.getElementById('booksTable');
+      loading.style.display = 'block';
+      table.style.display = 'none';
+
+      fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+          globalData = data;
+          renderTableData(data);
+          loading.style.display = 'none';
+          table.style.display = 'table';
+        })
+        .catch(err => {
+          loading.innerText = "⚠️ Failed to load catalog. Refresh page.";
+          console.error("Error fetching books:", err);
+        });
+    }
+
+    function renderTableData(data) {
+      const head = document.getElementById('tableHead');
+      const body = document.getElementById('tableBody');
+
+      if (data && data.length > 0) {
+        let headHtml = '';
+        data[0].forEach(col => { headHtml += '<th>' + col + '</th>'; });
+        if (adminToken) { headHtml += '<th>Actions</th>'; }
+        head.innerHTML = headHtml;
+
+        let bodyHtml = '';
+        for (let i = 1; i < data.length; i++) {
+          bodyHtml += '<tr>';
+          data[i].forEach(cell => {
+            bodyHtml += '<td>' + (cell !== undefined ? cell : '') + '</td>';
+          });
+
+          if (adminToken) {
+            bodyHtml += '<td>' +
+              '<button class="btn-edit" onclick="editBook(' + i + ')">Edit</button>' +
+              '<button class="btn-delete" onclick="deleteBook(' + (i + 1) + ')">Delete</button>' +
+            '</td>';
+          }
+          bodyHtml += '</tr>';
+        }
+        body.innerHTML = bodyHtml;
+        populateFilterDropdowns();
+        calculateDailyProgress();
+      }
+    }
+
+    function calculateDailyProgress() {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const userCounts = {};
+
+      for (let i = 1; i < globalData.length; i++) {
+        const user = globalData[i][15] || 'Anonymous';
+        const timestamp = globalData[i][16];
+
+        if (timestamp) {
+          const entryDate = new Date(timestamp).toISOString().slice(0, 10);
+          if (entryDate === todayStr) {
+            userCounts[user] = (userCounts[user] || 0) + 1;
+          }
+        }
+      }
+
+      const statsContainer = document.getElementById('progressStats');
+      statsContainer.innerHTML = '';
+
+      const users = Object.keys(userCounts);
+      if (users.length === 0) {
+        statsContainer.innerHTML = '<div style="color: #6c757d; font-style: italic;">No entries completed yet today.</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        const count = userCounts[user];
+        const percent = Math.min(Math.round((count / DAILY_QUOTA_PER_USER) * 100), 100);
+        
+        const div = document.createElement('div');
+        div.className = 'stat-card';
+        div.innerHTML = `
+          <div class="user-name">👤 ${user}</div>
+          <div class="count">${count} <span style="font-size: 14px; font-weight: normal; color: #555;">entries</span></div>
+          <div class="quota">Daily Goal: ${DAILY_QUOTA_PER_USER} entries (${percent}% completed)</div>
+        `;
+        statsContainer.appendChild(div);
+      });
+    }
+
+    function populateFilterDropdowns() {
+      const languages = new Set();
+      const topics = new Set();
+
+      for (let i = 1; i < globalData.length; i++) {
+        if (globalData[i][7]) languages.add(globalData[i][7].trim());
+        if (globalData[i][12]) topics.add(globalData[i][12].trim());
+      }
+
+      const langSelect = document.getElementById('filterLang');
+      langSelect.innerHTML = '<option value="">All Languages</option>';
+      languages.forEach(l => { if(l) langSelect.innerHTML += `<option value="${l}">${l}</option>`; });
+
+      const topicSelect = document.getElementById('filterTopic');
+      topicSelect.innerHTML = '<option value="">All Topics</option>';
+      topics.forEach(t => { if(t) topicSelect.innerHTML += `<option value="${t}">${t}</option>`; });
+    }
+
+    function checkAndFetchISBN(isbnRaw) {
+      const cleanIsbn = isbnRaw.replace(/[^0-9X]/gi, '');
+      if (!cleanIsbn) return;
+
+      for (let i = 1; i < globalData.length; i++) {
+        const existingIsbn = String(globalData[i][11] || '').replace(/[^0-9X]/gi, '');
+        if (existingIsbn && existingIsbn === cleanIsbn) {
+          alert(`⚠️ Book already exists in catalog!\nTitle: ${globalData[i][1]}\nSl. No: ${globalData[i][0]}`);
+          break;
+        }
+      }
+
+      fetchMetadataByISBN(cleanIsbn);
+    }
+
+    function fetchMetadataByISBN(isbn) {
+      if (isbn.length !== 10 && isbn.length !== 13) return;
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.innerText = "⏳ Fetching Book Details from Open Library...";
+
+      fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`)
+        .then(res => res.json())
+        .then(data => {
+          const bookKey = `ISBN:${isbn}`;
+          if (data && data[bookKey]) {
+            const book = data[bookKey];
+            if (!document.getElementById('title').value) document.getElementById('title').value = book.title || '';
+            if (!document.getElementById('author').value && book.authors) {
+              document.getElementById('author').value = book.authors.map(a => a.name).join(', ');
+            }
+            if (!document.getElementById('publisher').value && book.publishers) {
+              document.getElementById('publisher').value = book.publishers.map(p => p.name).join(', ');
+            }
+            if (!document.getElementById('year').value && book.publish_date) {
+              document.getElementById('year').value = book.publish_date;
+            }
+            if (!document.getElementById('subTitle').value && book.subtitle) {
+              document.getElementById('subTitle').value = book.subtitle;
+            }
+          }
+        })
+        .catch(err => console.warn("ISBN Fetch error:", err))
+        .finally(() => {
+          const editRowIndex = document.getElementById('editRowIndex').value;
+          submitBtn.innerText = editRowIndex ? 'Update Book Info' : 'Add Book to Library';
+        });
+    }
+
+    function openBarcodeScanner() {
+      document.getElementById('scannerModal').style.display = 'flex';
+      document.getElementById('scannerStatus').innerText = "Starting camera...";
+
+      if ('BarcodeDetector' in window) {
+        startNativeScanner();
+      } else {
+        startStrictQuaggaScanner();
+      }
+    }
+
+    function handleSuccessfulScan(rawCode) {
+      const code = rawCode.trim();
+      if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
+        document.getElementById('isbn').value = code;
+        checkAndFetchISBN(code);
+        closeBarcodeScanner();
+      } else if (code.length === 10) {
+        document.getElementById('isbn').value = code;
+        checkAndFetchISBN(code);
+        closeBarcodeScanner();
+      } else {
+        document.getElementById('scannerStatus').innerText = `⚠️ Scanned barcode (${code}) is not a valid ISBN. Retrying...`;
+      }
+    }
+
+    async function startNativeScanner() {
+      document.getElementById('nativeVideoWrapper').style.display = 'block';
+      document.getElementById('interactive').style.display = 'none';
+      const video = document.getElementById('nativeVideo');
+
+      try {
+        nativeStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        video.srcObject = nativeStream;
+
+        const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] });
+        document.getElementById('scannerStatus').innerText = "Camera Active. Align barcode inside box...";
+
+        nativeScanInterval = setInterval(async () => {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            try {
+              const barcodes = await barcodeDetector.detect(video);
+              if (barcodes.length > 0) {
+                handleSuccessfulScan(barcodes[0].rawValue);
+              }
+            } catch (e) { console.error(e); }
+          }
+        }, 200);
+
+      } catch (err) {
+        startStrictQuaggaScanner();
+      }
+    }
+
+    function startStrictQuaggaScanner() {
+      document.getElementById('nativeVideoWrapper').style.display = 'none';
+      document.getElementById('interactive').style.display = 'block';
+      document.getElementById('scannerStatus').innerText = "Align ISBN Barcode inside window...";
+
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: document.querySelector('#interactive'),
+          constraints: { facingMode: "environment", focusMode: "continuous" }
+        },
+        decoder: { readers: ["ean_reader"], multiple: false },
+        locate: true
+      }, function(err) {
+        if (err) {
+          alert("Camera permission denied or unavailable.");
+          closeBarcodeScanner();
+          return;
+        }
+        Quagga.start();
+      });
+
+      let lastCode = "";
+      let matchCount = 0;
+
+      Quagga.onDetected(function(result) {
+        if (result && result.codeResult && result.codeResult.code) {
+          const code = result.codeResult.code;
+          if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
+            if (code === lastCode) {
+              matchCount++;
+            } else {
+              lastCode = code;
+              matchCount = 1;
+            }
+            if (matchCount >= 3) {
+              handleSuccessfulScan(code);
+            }
+          }
+        }
+      });
+    }
+
+    function closeBarcodeScanner() {
+      if (nativeScanInterval) clearInterval(nativeScanInterval);
+      if (nativeStream) {
+        nativeStream.getTracks().forEach(track => track.stop());
+        nativeStream = null;
+      }
+      try { Quagga.stop(); } catch(e){}
+
+      document.getElementById('scannerModal').style.display = 'none';
+      document.getElementById('nativeVideoWrapper').style.display = 'none';
+      document.getElementById('interactive').style.display = 'none';
+    }
+
+    function exportToCSV() {
+      if (!globalData || globalData.length === 0) {
+        alert("No data to export.");
+        return;
+      }
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+      globalData.forEach(row => {
+        const escapedRow = row.map(cell => `"${(cell !== undefined ? cell : '').toString().replace(/"/g, '""')}"`);
+        csvContent += escapedRow.join(",") + "\r\n";
+      });
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Library_Catalog_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function setupGlobalAutocomplete() {
+      document.querySelectorAll('input[data-autocomplete="true"]').forEach(input => {
+        input.addEventListener('input', function() { handleFieldInput(this); });
+        input.addEventListener('keydown', function(e) { handleFieldKeyDown(e, this); });
+      });
+    }
+
+    function handleFieldInput(inputElem) {
+      const wrapper = inputElem.closest('.autocomplete-wrapper');
+      const box = wrapper.querySelector('.suggestions-box');
+      const query = inputElem.value.trim().toLowerCase();
+      const targetCol = parseInt(inputElem.dataset.col);
+      selectedIndex = -1;
+
+      closeAllSuggestions();
+
+      if (!query || !globalData || globalData.length <= 1) return;
+
+      const matches = new Set();
+      for (let i = 1; i < globalData.length; i++) {
+        const fieldValue = String(globalData[i][targetCol] || '').trim();
+        if (fieldValue && fieldValue.toLowerCase().includes(query)) {
+          matches.add(fieldValue);
+          if (matches.size >= 8) break;
+        }
+      }
+
+      if (matches.size === 0) return;
+
+      box.innerHTML = '';
+      matches.forEach(value => {
+        const item = document.createElement('div');
+        item.className = 'suggestion-item';
+        item.innerHTML = `<strong>${value}</strong>`;
+        item.dataset.value = value;
+
+        item.onmousedown = function(e) {
+          e.preventDefault();
+          inputElem.value = value;
+          closeAllSuggestions();
+        };
+        box.appendChild(item);
+      });
+
+      box.style.display = 'block';
+    }
+
+    function handleFieldKeyDown(e, inputElem) {
+      const wrapper = inputElem.closest('.autocomplete-wrapper');
+      const box = wrapper.querySelector('.suggestions-box');
+      const items = box.querySelectorAll('.suggestion-item');
+
+      if (box.style.display === 'none' || items.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === 'Enter') {
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+          e.preventDefault();
+          inputElem.value = items[selectedIndex].dataset.value;
+          closeAllSuggestions();
+        }
+      } else if (e.key === 'Escape') {
+        closeAllSuggestions();
+      }
+    }
+
+    function updateActiveItem(items) {
+      items.forEach((item, idx) => {
+        if (idx === selectedIndex) {
+          item.classList.add('active');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    function closeAllSuggestions() {
+      document.querySelectorAll('.suggestions-box').forEach(box => { box.style.display = 'none'; });
+      selectedIndex = -1;
+    }
+
+    function populateFormFields(row) {
+      document.getElementById('title').value = row[1] || '';
+      document.getElementById('titleEng').value = row[2] || '';
+      document.getElementById('subTitle').value = row[3] || '';
+      document.getElementById('author').value = row[4] || '';
+      document.getElementById('editor').value = row[5] || '';
+
+      document.getElementById('commentaryContainer').innerHTML = '';
+      const commString = row[6] || '';
+      if (commString) {
+        const pairs = commString.split(' | ');
+        pairs.forEach(pair => {
+          const match = pair.match(/(.*) \(Author: (.*)\)/);
+          if (match) {
+            addCommentaryRow(match[1], match[2]);
+          } else {
+            addCommentaryRow(pair, '');
+          }
+        });
+      } else {
+        addCommentaryRow();
+      }
+
+      document.getElementById('lang').value = row[7] || '';
+      document.getElementById('vol').value = row[8] || '';
+      document.getElementById('publisher').value = row[9] || '';
+      document.getElementById('year').value = row[10] || '';
+      document.getElementById('isbn').value = row[11] || '';
+      document.getElementById('topic').value = row[12] || '';
+      document.getElementById('subject').value = row[13] || '';
+      document.getElementById('condition').value = row[14] || '';
+      if (!loggedInUser) {
+        document.getElementById('createdBy').value = row[15] || '';
+      }
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.autocomplete-wrapper')) closeAllSuggestions();
+    });
+
+    document.getElementById('addBookForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (isSubmitting) return false;
+
+      const userName = document.getElementById('createdBy').value.trim();
+      if (!userName) {
+        alert("Please log in or enter your name in the 'Cataloguer Name' field.");
+        return;
+      }
+
+      const editRowIndex = document.getElementById('editRowIndex').value;
+      if (editRowIndex && !adminToken) {
+        alert("Only administrators can edit entries.");
+        return;
+      }
+
+      isSubmitting = true;
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.innerText;
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = editRowIndex ? "⏳ Updating..." : "⏳ Saving...";
+
+      const formData = {
+        slNo: document.getElementById('slNo').value,
+        title: document.getElementById('title').value,
+        titleEng: document.getElementById('titleEng').value,
+        subTitle: document.getElementById('subTitle').value,
+        author: document.getElementById('author').value,
+        editor: document.getElementById('editor').value,
+        commentariesLinked: getLinkedCommentaries(),
+        lang: document.getElementById('lang').value,
+        vol: document.getElementById('vol').value,
+        publisher: document.getElementById('publisher').value,
+        year: document.getElementById('year').value,
+        isbn: document.getElementById('isbn').value,
+        topic: document.getElementById('topic').value,
+        subject: document.getElementById('subject').value,
+        condition: document.getElementById('condition').value,
+        createdBy: userName
+      };
+
+      const payload = {
+        action: editRowIndex ? "update" : "add",
+        adminToken: adminToken,
+        rowIndex: editRowIndex ? parseInt(editRowIndex) + 1 : null,
+        data: formData
+      };
+
+      fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          alert(editRowIndex ? 'Book updated successfully!' : 'Book added to catalog!');
+          resetForm();
+          fetchBooks();
+        } else {
+          alert("Error: " + res.message);
+        }
+      })
+      .catch(err => alert("Submission failed: " + err))
+      .finally(() => {
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
+      });
+    });
+
+    function editBook(index) {
+      if (!adminToken) { alert("Unauthorized."); return; }
+      const row = globalData[index];
+      document.getElementById('editRowIndex').value = index;
+      document.getElementById('slNo').value = row[0] || '';
+      
+      populateFormFields(row);
+
+      document.getElementById('formTitle').innerText = 'Edit Book Information (Admin)';
+      document.getElementById('submitBtn').innerText = 'Update Book Info';
+      document.getElementById('cancelBtn').style.display = 'inline-block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.getElementById('addBookForm').reset();
+      document.getElementById('editRowIndex').value = '';
+      document.getElementById('slNo').value = '';
+      document.getElementById('commentaryContainer').innerHTML = '';
+      
+      if (loggedInUser) {
+        document.getElementById('createdBy').value = loggedInUser;
+      }
+
+      addCommentaryRow();
+      document.getElementById('formTitle').innerText = 'Add New Book Entry';
+      document.getElementById('submitBtn').innerText = 'Add Book to Library';
+      document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    function deleteBook(rowIndex) {
+      if (!adminToken) { alert("Unauthorized."); return; }
+      if (confirm('Delete this book entry permanently?')) {
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'delete', adminToken: adminToken, rowIndex: rowIndex })
+        })
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            alert('Book deleted!');
+            fetchBooks();
+          } else {
+            alert('Error: ' + res.message);
+          }
+        })
+        .catch(err => alert("Delete failed: " + err));
+      }
+    }
+
+    function filterBooks() {
+      const searchVal = document.getElementById('searchBox').value.toLowerCase();
+      const selectedLang = document.getElementById('filterLang').value.toLowerCase();
+      const selectedTopic = document.getElementById('filterTopic').value.toLowerCase();
+      const selectedCond = document.getElementById('filterCond').value;
+
+      const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        if (cells.length === 0) continue;
+
+        const textMatch = !searchVal || row.textContent.toLowerCase().includes(searchVal);
+        const langMatch = !selectedLang || (cells[7] && cells[7].textContent.toLowerCase().trim() === selectedLang);
+        const topicMatch = !selectedTopic || (cells[12] && cells[12].textContent.toLowerCase().trim() === selectedTopic);
+        const condMatch = !selectedCond || (cells[14] && cells[14].textContent.trim() === selectedCond);
+
+        if (textMatch && langMatch && topicMatch && condMatch) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      }
+    }
+  </script>
 </body>
 </html>
