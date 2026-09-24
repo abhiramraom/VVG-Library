@@ -429,30 +429,21 @@
     let nativeScanInterval = null;
 
     window.onload = function() {
-      // Restore logged-in user session
-      const savedUser = localStorage.getItem('cataloguer_name');
-      if (savedUser) {
-        setLoggedInUser(savedUser, false);
-      } else {
-        loginUser();
-      }
-
-      // Restore saved Admin Token across refreshes
-      const savedAdminToken = sessionStorage.getItem('adminToken');
-      if (savedAdminToken) {
-        adminToken = savedAdminToken;
-        updateAdminUI(true);
-      } else {
-        updateAdminUI(false);
-      }
-
+      // Clear any session storage on hard refresh to force login every time
+      sessionStorage.removeItem('adminToken');
+      
       addCommentaryRow();
       fetchBooks();
       setupGlobalAutocomplete();
+
+      // Always prompt cataloguer for login when page newly opens
+      setTimeout(() => {
+        loginUser();
+      }, 300);
     };
 
     function loginUser() {
-      const name = prompt("Enter your Cataloguer Name to log in:", loggedInUser || "");
+      const name = prompt("Enter your Cataloguer Name to log in:", "");
       if (name && name.trim()) {
         setLoggedInUser(name.trim(), true);
       }
@@ -460,16 +451,13 @@
 
     function setLoggedInUser(name, triggerProgressUpdate) {
       loggedInUser = name;
-      localStorage.setItem('cataloguer_name', name);
       
       const createdByInput = document.getElementById('createdBy');
       createdByInput.value = name;
       createdByInput.readOnly = true;
       createdByInput.style.backgroundColor = "#edf2f7";
 
-      const userBadge = document.getElementById('userBadge');
-      userBadge.innerText = `Logged in: ${name}`;
-      userBadge.style.display = 'inline-block';
+      updateUserBadge();
 
       document.getElementById('userLoginBtn').style.display = 'none';
       document.getElementById('userLogoutBtn').style.display = 'inline-block';
@@ -481,7 +469,6 @@
 
     function logoutUser() {
       if (confirm("Switch cataloguer profile?")) {
-        localStorage.removeItem('cataloguer_name');
         loggedInUser = null;
         
         const createdByInput = document.getElementById('createdBy');
@@ -489,7 +476,8 @@
         createdByInput.readOnly = false;
         createdByInput.style.backgroundColor = "#fff";
 
-        document.getElementById('userBadge').style.display = 'none';
+        updateUserBadge();
+
         document.getElementById('userLoginBtn').style.display = 'inline-block';
         document.getElementById('userLogoutBtn').style.display = 'none';
 
@@ -510,7 +498,6 @@
       .then(res => {
         if (res.success) {
           adminToken = res.token;
-          sessionStorage.setItem('adminToken', adminToken);
           alert("Admin mode activated!");
           updateAdminUI(true);
         } else {
@@ -522,7 +509,6 @@
 
     function logoutAdmin() {
       adminToken = null;
-      sessionStorage.removeItem('adminToken');
       alert("Logged out of Admin mode.");
       updateAdminUI(false);
       resetForm();
@@ -533,9 +519,26 @@
       document.getElementById('adminLoginBtn').style.display = isAdmin ? 'none' : 'inline-block';
       document.getElementById('adminLogoutBtn').style.display = isAdmin ? 'inline-block' : 'none';
       
+      updateUserBadge();
+
       if (globalData && globalData.length > 0) {
         renderTableData(globalData);
         calculateDailyProgress();
+      }
+    }
+
+    function updateUserBadge() {
+      const userBadge = document.getElementById('userBadge');
+      if (adminToken) {
+        userBadge.innerText = `Logged in: Administrator`;
+        userBadge.style.background = '#8e44ad'; // Purple badge for Admin
+        userBadge.style.display = 'inline-block';
+      } else if (loggedInUser) {
+        userBadge.innerText = `Logged in: ${loggedInUser}`;
+        userBadge.style.background = '#27ae60'; // Green badge for Cataloguer
+        userBadge.style.display = 'inline-block';
+      } else {
+        userBadge.style.display = 'none';
       }
     }
 
@@ -616,7 +619,6 @@
       }
     }
 
-    /* Updated progress display logic with role-based visibility */
     function calculateDailyProgress() {
       const statsContainer = document.getElementById('progressStats');
       const progressTitle = document.getElementById('progressTitle');
