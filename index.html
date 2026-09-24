@@ -3,782 +3,1135 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Personal Library Management System</title>
-  <!-- QuaggaJS Fallback Engine -->
+  <title>Library Cataloging System</title>
+  
+  <!-- QuaggaJS Barcode Fallback -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/quagga/0.12.1/quagga.min.js"></script>
+
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f6f9; }
-    .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    h1, h2 { color: #333; margin: 0; }
-    .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
-    .form-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
-    input, select, button { padding: 8px; border: 1px solid #ccc; border-radius: 4px; width: 100%; box-sizing: border-box; }
-    button { background-color: #28a745; color: white; border: none; cursor: pointer; font-weight: bold; }
-    button:hover { background-color: #218838; }
-    button:disabled { background-color: #a5d6a7 !important; color: #ffffff !important; cursor: not-allowed !important; pointer-events: none !important; opacity: 0.6; }
-
-    .btn-admin { background-color: #007bff; width: auto; padding: 8px 16px; }
-    .btn-logout { background-color: #6c757d; width: auto; padding: 8px 16px; }
-    .btn-feature { background-color: #17a2b8; width: auto; padding: 8px 14px; margin-left: 5px; color: white; }
-    .btn-feature:hover { background-color: #138496; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+      background-color: #f4f6f9;
+      color: #333;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2c3e50;
+      color: #fff;
+      padding: 15px 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    .header-bar h1 { margin: 0; font-size: 22px; }
+    .badge {
+      font-size: 13px;
+      background: #34495e;
+      padding: 5px 12px;
+      border-radius: 12px;
+    }
     
-    .commentary-box { grid-column: 1 / -1; background: #eef2f7; padding: 12px; border-radius: 6px; border: 1px solid #d0d7de; }
-    .commentary-row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
+    .card {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+      margin-bottom: 20px;
+    }
+    .card-title {
+      font-size: 18px;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 15px;
+      border-bottom: 2px solid #eef2f5;
+      padding-bottom: 8px;
+      color: #2c3e50;
+    }
+
+    /* Progress Stats Dashboard */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 15px;
+    }
+    .stat-card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-left: 4px solid #3498db;
+      border-radius: 6px;
+      padding: 12px 15px;
+    }
+    .stat-card .user-name { font-weight: 600; color: #2c3e50; margin-bottom: 4px; }
+    .stat-card .count { font-size: 22px; font-weight: bold; color: #27ae60; }
+    .stat-card .quota { font-size: 12px; color: #7f8c8d; }
+
+    /* Form Layout */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 15px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+    }
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+    label {
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 5px;
+      color: #4a5568;
+    }
+    input, select {
+      padding: 10px;
+      border: 1px solid #cbd5e0;
+      border-radius: 6px;
+      font-size: 14px;
+      outline: none;
+      transition: border 0.2s;
+    }
+    input:focus, select:focus {
+      border-color: #3498db;
+      box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+    
+    /* Virtual Diacritics Toolbar */
+    .diacritics-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      background: #edf2f7;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    .diacritic-btn {
+      background: #fff;
+      border: 1px solid #cbd5e0;
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-size: 15px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .diacritic-btn:hover {
+      background: #3498db;
+      color: #fff;
+      border-color: #3498db;
+    }
+
+    /* Commentaries Rows */
+    .commentary-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
     .commentary-row input { flex: 1; }
-    .btn-remove { background: #dc3545; width: auto; padding: 6px 12px; }
-    .btn-add { background: #17a2b8; margin-top: 5px; width: auto; padding: 6px 12px; }
     
-    .btn-edit { background-color: #ffc107; color: #000; padding: 4px 8px; margin-right: 5px; width: auto; }
-    .btn-delete { background-color: #dc3545; color: #fff; padding: 4px 8px; width: auto; }
-    
-    .toolbar { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; flex-wrap: wrap; }
-    #searchBox { flex: 1; padding: 10px; font-size: 16px; min-width: 250px; }
-    
-    table { width: 100%; border-collapse: collapse; background: white; }
-    th, td { border: 1px solid #ddd; padding: 8px; text-align: left; font-size: 14px; vertical-align: middle; }
-    th { background-color: #007bff; color: white; }
-    tr:nth-child(even) { background-color: #f9f9f9; }
-    
-    input:disabled { background-color: #e9ecef; cursor: not-allowed; }
+    /* Buttons */
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: #27ae60; color: #fff; }
+    .btn-primary:hover { background: #219653; }
+    .btn-secondary { background: #3498db; color: #fff; }
+    .btn-secondary:hover { background: #2980b9; }
+    .btn-danger { background: #e74c3c; color: #fff; }
+    .btn-danger:hover { background: #c0392b; }
+    .btn-outline { background: transparent; border: 1px solid #fff; color: #fff; }
+    .btn-outline:hover { background: rgba(255,255,255,0.1); }
+    .btn-remove { background: #e74c3c; color: #fff; border: none; border-radius: 4px; padding: 0 12px; cursor: pointer; }
 
-    .autocomplete-wrapper { position: relative; width: 100%; }
+    /* Autocomplete Box */
+    .autocomplete-wrapper { position: relative; }
     .suggestions-box {
       position: absolute;
       top: 100%;
       left: 0;
       right: 0;
-      background: #ffffff;
-      border: 1px solid #007bff;
+      background: #fff;
+      border: 1px solid #cbd5e0;
+      border-top: none;
       border-radius: 0 0 6px 6px;
-      max-height: 220px;
+      max-height: 180px;
       overflow-y: auto;
       z-index: 1000;
       display: none;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .suggestion-item {
-      padding: 10px;
+      padding: 8px 12px;
       cursor: pointer;
-      border-bottom: 1px solid #eee;
       font-size: 13px;
     }
-    .suggestion-item:hover,
-    .suggestion-item.active { 
-      background-color: #007bff;
-      color: #ffffff;
+    .suggestion-item:hover, .suggestion-item.active {
+      background: #ebf8ff;
+      color: #2b6cb0;
     }
+
+    /* Table & Controls */
+    .table-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    .table-controls input, .table-controls select {
+      flex: 1;
+      min-width: 150px;
+    }
+    .table-wrapper {
+      overflow-x: auto;
+      max-height: 500px;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      text-align: left;
+    }
+    th, td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #e2e8f0;
+      white-space: nowrap;
+    }
+    th {
+      background: #f7fafc;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      color: #4a5568;
+    }
+    tr:hover { background: #f8fafc; }
     
-    .loading-spinner { font-weight: bold; color: #007bff; padding: 15px; text-align: center; }
+    .btn-edit { background: #f39c12; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; margin-right: 4px; }
+    .btn-delete { background: #e74c3c; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; }
 
-    /* Scanner Overlay Modal */
-    #scannerModal {
-      display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%;
-      background-color: rgba(0,0,0,0.85); justify-content: center; align-items: center; flex-direction: column;
+    /* Barcode Modal */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 2000;
+      justify-content: center;
+      align-items: center;
     }
-    .scanner-content {
-      background: white; padding: 20px; border-radius: 8px; text-align: center; max-width: 500px; width: 90%;
+    .modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
     }
-    #interactive.viewport, #nativeVideoWrapper {
-      width: 100%; height: 280px; position: relative; overflow: hidden; background: #000; border-radius: 4px;
-    }
-    #interactive.viewport canvas, #interactive.viewport video, #nativeVideo {
-      width: 100%; height: 100%; object-fit: cover;
-    }
-    .scanner-status { margin-top: 10px; font-weight: bold; color: #007bff; font-size: 14px; }
-
-    /* Print Styles */
-    @media print {
-      body { background-color: white; margin: 0; }
-      .header-bar, .card:first-of-type, .toolbar, .btn-edit, .btn-delete, th:last-child, td:last-child {
-        display: none !important;
-      }
-      .card { box-shadow: none; padding: 0; }
-      table { border: 1px solid #000; }
-      th, td { border: 1px solid #000; font-size: 11px; }
-      th { background-color: #eee !important; color: #000 !important; }
+    #interactive video, #nativeVideo {
+      width: 100%;
+      max-height: 300px;
+      border-radius: 6px;
+      background: #000;
     }
   </style>
 </head>
 <body>
 
+  <!-- Header -->
   <div class="header-bar">
-    <h1>📚 Library Management System</h1>
     <div>
-      <span id="roleBadge" style="margin-right: 10px; font-weight: bold; color: #555;">Role: Standard User</span>
-      <button id="adminLoginBtn" class="btn-admin" onclick="toggleAdminLogin()">🔐 Admin Login</button>
-      <button id="adminLogoutBtn" class="btn-logout" onclick="logoutAdmin()" style="display:none;">🔒 Logout Admin</button>
+      <h1>📚 Library Cataloging Portal</h1>
+      <span id="roleBadge" class="badge">Role: Standard User</span>
+    </div>
+    <div>
+      <button id="adminLoginBtn" class="btn btn-outline" onclick="toggleAdminLogin()">Admin Login</button>
+      <button id="adminLogoutBtn" class="btn btn-outline" onclick="logoutAdmin()" style="display:none;">Logout Admin</button>
     </div>
   </div>
 
-  <div class="card" id="bookFormCard">
-    <h2 id="formTitle">Add New Book Entry</h2>
-    <form id="addBookForm" autocomplete="off">
+  <!-- Daily Progress Dashboard -->
+  <div class="card">
+    <div class="card-title">📊 Today's Progress Report</div>
+    <div id="progressStats" class="stats-grid">
+      <div style="color: #7f8c8d; font-style: italic;">Loading daily progress statistics...</div>
+    </div>
+  </div>
+
+  <!-- Book Entry Form -->
+  <div class="card">
+    <div class="card-title" id="formTitle">Add New Book Entry</div>
+    
+    <!-- Virtual Character Inserter -->
+    <label>Quick Character Insert (Click to add at cursor position):</label>
+    <div class="diacritics-toolbar">
+      <button type="button" class="diacritic-btn" onclick="insertChar('ā')">ā</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ī')">ī</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ū')">ū</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṛ')">ṛ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṝ')">ṝ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ḷ')">ḷ</button>
+
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṅ')">ṅ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ñ')">ñ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṭ')">ṭ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ḍ')">ḍ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṇ')">ṇ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ś')">ś</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṣ')">ṣ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṃ')">ṃ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ḥ')">ḥ</button>
+    </div>
+
+    <form id="addBookForm">
       <input type="hidden" id="editRowIndex" value="">
+
       <div class="form-grid">
-        <input type="text" id="slNo" placeholder="Sl. No (Auto-generated)" disabled>
-        
-        <div class="autocomplete-wrapper">
-          <input type="text" id="title" data-col="1" data-autocomplete="true" placeholder="Title (Original)" required>
+        <div class="form-group">
+          <label for="slNo">Serial No. (Auto-assigned)</label>
+          <input type="text" id="slNo" placeholder="Auto" readonly style="background: #edf2f7;">
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="title">Book Title (Original Script / Devanagari) *</label>
+          <input type="text" id="title" required data-autocomplete="true" data-col="1" placeholder="e.g. श्रीमद्भगवद्गीता">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="titleEng" data-col="2" data-autocomplete="true" placeholder="Title (English)">
+        <div class="form-group autocomplete-wrapper">
+          <label for="titleEng">Book Title (English / Transliterated)</label>
+          <input type="text" id="titleEng" data-autocomplete="true" data-col="2" placeholder="e.g. Srimad Bhagavad Gita">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="subTitle" data-col="3" data-autocomplete="true" placeholder="Sub-title">
+        <div class="form-group">
+          <label for="subTitle">Subtitle</label>
+          <input type="text" id="subTitle" placeholder="Subtitle if any">
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="author">Author *</label>
+          <input type="text" id="author" required data-autocomplete="true" data-col="4" placeholder="e.g. Veda Vyasa">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="author" data-col="4" data-autocomplete="true" placeholder="Author & CoAuthor">
+        <div class="form-group autocomplete-wrapper">
+          <label for="editor">Editor / Translator</label>
+          <input type="text" id="editor" data-autocomplete="true" data-col="5" placeholder="e.g. Swami Gambhirananda">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="editor" data-col="5" data-autocomplete="true" placeholder="Editor & Co-Editor">
+        <!-- Commentaries Section -->
+        <div class="form-group full-width">
+          <label>Linked Commentaries & Authors</label>
+          <div id="commentaryContainer"></div>
+          <button type="button" class="btn btn-secondary" style="width: fit-content; margin-top: 5px; font-size: 12px; padding: 6px 12px;" onclick="addCommentaryRow()">+ Add Another Commentary</button>
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="lang">Language *</label>
+          <input type="text" id="lang" required data-autocomplete="true" data-col="7" placeholder="e.g. Sanskrit, Kannada, English">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="lang" data-col="7" data-autocomplete="true" placeholder="Language">
+        <div class="form-group">
+          <label for="vol">Volume / Part No.</label>
+          <input type="text" id="vol" placeholder="e.g. Vol 1, Part II">
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="publisher">Publisher</label>
+          <input type="text" id="publisher" data-autocomplete="true" data-col="9" placeholder="e.g. Gita Press">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="vol" data-col="8" data-autocomplete="true" placeholder="Vol (IF)">
+        <div class="form-group">
+          <label for="year">Publication Year</label>
+          <input type="text" id="year" placeholder="e.g. 1998">
+        </div>
+
+        <div class="form-group">
+          <label for="isbn">ISBN (Scan or Type)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="isbn" style="flex: 1;" placeholder="10 or 13 digit ISBN" onchange="checkAndFetchISBN(this.value)">
+            <button type="button" class="btn btn-secondary" onclick="openBarcodeScanner()">📷 Scan</button>
+          </div>
+        </div>
+
+        <div class="form-group autocomplete-wrapper">
+          <label for="topic">Topic / Category *</label>
+          <input type="text" id="topic" required data-autocomplete="true" data-col="12" placeholder="e.g. Vedanta, Nyaya, Kavya">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="publisher" data-col="9" data-autocomplete="true" placeholder="Publisher">
+        <div class="form-group autocomplete-wrapper">
+          <label for="subject">Subject Details</label>
+          <input type="text" id="subject" data-autocomplete="true" data-col="13" placeholder="e.g. Advaita, Prasthanatrayi">
           <div class="suggestions-box"></div>
         </div>
 
-        <div class="autocomplete-wrapper">
-          <input type="text" id="year" data-col="10" data-autocomplete="true" placeholder="Year of Print">
-          <div class="suggestions-box"></div>
+        <div class="form-group">
+          <label for="condition">Physical Condition</label>
+          <select id="condition">
+            <option value="Good">Good</option>
+            <option value="Fair">Fair</option>
+            <option value="Damaged">Damaged</option>
+            <option value="Needs Binding">Needs Binding</option>
+          </select>
         </div>
 
-        <!-- ISBN Barcode Scanner -->
-        <div class="autocomplete-wrapper" style="display: flex; gap: 5px;">
-          <input type="text" id="isbn" data-col="11" data-autocomplete="true" placeholder="ISBN (Scan or Type)" onchange="fetchMetadataByISBN(this.value)">
-          <button type="button" class="btn-feature" title="Scan Barcode via Camera" onclick="openBarcodeScanner()">📷 Scan</button>
+        <div class="form-group autocomplete-wrapper">
+          <label for="createdBy">Cataloguer Name *</label>
+          <input type="text" id="createdBy" required data-autocomplete="true" data-col="15" placeholder="Your name">
           <div class="suggestions-box"></div>
-        </div>
-
-        <div class="autocomplete-wrapper">
-          <input type="text" id="topic" data-col="12" data-autocomplete="true" placeholder="Topic">
-          <div class="suggestions-box"></div>
-        </div>
-
-        <div class="autocomplete-wrapper">
-          <input type="text" id="subject" data-col="13" data-autocomplete="true" placeholder="Subject">
-          <div class="suggestions-box"></div>
-        </div>
-
-        <select id="condition" required>
-          <option value="" disabled selected>Select Condition...</option>
-          <option value="A">A</option>
-          <option value="B">B</option>
-          <option value="C">C</option>
-        </select>
-
-        <div class="commentary-box">
-          <label><strong>Commentaries & Their Authors:</strong></label>
-          <div id="commentaryContainer" style="margin-top: 8px;"></div>
-          <button type="button" class="btn-add" onclick="addCommentaryRow()">+ Add Commentary & Author</button>
         </div>
       </div>
-      <br>
-      <button type="submit" id="submitBtn">Add Book to Library</button>
-      <button type="button" id="cancelBtn" onclick="resetForm()" style="background-color: #6c757d; display: none; margin-top: 5px;">Cancel Editing</button>
+
+      <div style="margin-top: 20px; display: flex; gap: 10px;">
+        <button type="submit" id="submitBtn" class="btn btn-primary">Add Book to Library</button>
+        <button type="button" id="cancelBtn" class="btn btn-danger" style="display: none;" onclick="resetForm()">Cancel Edit</button>
+      </div>
     </form>
   </div>
 
+  <!-- Catalog View Table -->
   <div class="card">
-    <h2>Book Catalogue</h2>
-    <div class="toolbar">
-      <input type="text" id="searchBox" onkeyup="searchBooks()" placeholder="🔍 Search by Title, Author, Subject, etc...">
-      <button type="button" class="btn-feature" onclick="exportToCSV()">📥 Export CSV</button>
-      <button type="button" class="btn-feature" onclick="window.print()">🖨️ Print / PDF</button>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap;" class="card-title">
+      <span>📖 Library Catalog Records</span>
+      <button class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" onclick="exportToCSV()">📥 Export to CSV</button>
     </div>
 
-    <div style="overflow-x:auto;">
-      <div id="loadingIndicator" class="loading-spinner">⏳ Fetching library records, please wait...</div>
-      <table id="booksTable" style="display:none;">
-        <thead>
-          <tr id="tableHead"></tr>
-        </thead>
+    <div class="table-controls">
+      <input type="text" id="searchBox" placeholder="🔍 Search titles, authors, keywords..." onkeyup="filterBooks()">
+      <select id="filterLang" onchange="filterBooks()">
+        <option value="">All Languages</option>
+      </select>
+      <select id="filterTopic" onchange="filterBooks()">
+        <option value="">All Topics</option>
+      </select>
+      <select id="filterCond" onchange="filterBooks()">
+        <option value="">All Conditions</option>
+        <option value="Good">Good</option>
+        <option value="Fair">Fair</option>
+        <option value="Damaged">Damaged</option>
+        <option value="Needs Binding">Needs Binding</option>
+      </select>
+    </div>
+
+    <div id="loadingIndicator" style="text-align: center; padding: 30px; color: #7f8c8d;">
+      ⏳ Loading catalog data from Google Sheets...
+    </div>
+
+    <div class="table-wrapper">
+      <table id="booksTable" style="display: none;">
+        <thead><tr id="tableHead"></tr></thead>
         <tbody id="tableBody"></tbody>
       </table>
     </div>
   </div>
 
-  <!-- Camera Scanner Modal -->
-  <div id="scannerModal">
-    <div class="scanner-content">
-      <h3 style="margin-top:0;">Position ISBN Barcode in View</h3>
-      
+  <!-- Barcode Scanner Modal -->
+  <div id="scannerModal" class="modal">
+    <div class="modal-content">
+      <h3 style="margin-top:0;">Scan Book Barcode</h3>
       <div id="nativeVideoWrapper" style="display:none;">
-        <video id="nativeVideo" autoplay playsinline></video>
+        <video id="nativeVideo" autoplay playsinline muted></video>
       </div>
-      <div id="interactive" class="viewport" style="display:none;"></div>
-
-      <div id="scannerStatus" class="scanner-status">Initializing Camera...</div>
-      <br>
-      <button type="button" class="btn-remove" onclick="closeBarcodeScanner()">Close Scanner</button>
+      <div id="interactive" class="viewport"></div>
+      <p id="scannerStatus" style="font-size: 13px; color: #555; margin-top: 10px;">Initializing camera...</p>
+      <button class="btn btn-danger" style="margin-top: 10px;" onclick="closeBarcodeScanner()">Close Camera</button>
     </div>
   </div>
 
-<script>
-  const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydUNQacZxE91f6IC6vuQlZsVGGUj8-mFdwuzU2Hpw1CRjFq7DNWZT2hWyIelmYErxU/exec';
-  
-  let adminToken = null;
-  let globalData = [];
-  let selectedIndex = -1;
-  let isSubmitting = false;
+  <script>
+    // REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTN6n6UTidikS-iGwimpngHqx5EE_J_6EGTTLFDi2SGSNcUiXJEFfhmRf4PcaVDqc/exec';
+    const DAILY_QUOTA_PER_USER = 30; // Daily entry target per cataloguer
 
-  // Scanner Variables
-  let nativeStream = null;
-  let nativeScanInterval = null;
+    let adminToken = null;
+    let globalData = [];
+    let selectedIndex = -1;
+    let isSubmitting = false;
+    let lastActiveInput = null;
 
-  window.onload = function() {
-    addCommentaryRow();
-    fetchBooks();
-    setupGlobalAutocomplete();
-  };
+    let nativeStream = null;
+    let nativeScanInterval = null;
 
-  function toggleAdminLogin() {
-    const pwd = prompt("Enter Admin Password:");
-    if (!pwd) return;
+    window.onload = function() {
+      // 1. Restore saved cataloguer name
+      const savedUser = localStorage.getItem('cataloguer_name');
+      if (savedUser) {
+        document.getElementById('createdBy').value = savedUser;
+      }
 
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'login', password: pwd })
-    })
-    .then(res => res.json())
-    .then(res => {
-      if (res.success) {
-        adminToken = res.token;
-        alert("Admin mode activated!");
+      // 2. Restore saved Admin Token across page refreshes
+      const savedAdminToken = sessionStorage.getItem('adminToken');
+      if (savedAdminToken) {
+        adminToken = savedAdminToken;
         updateAdminUI(true);
       } else {
-        alert("Incorrect Password!");
+        updateAdminUI(false);
       }
-    })
-    .catch(err => alert("Connection error: " + err));
-  }
 
-  function logoutAdmin() {
-    adminToken = null;
-    alert("Logged out of Admin mode.");
-    updateAdminUI(false);
-    resetForm();
-  }
-
-  function updateAdminUI(isAdmin) {
-    document.getElementById('roleBadge').innerText = isAdmin ? 'Role: Administrator' : 'Role: Standard User';
-    document.getElementById('adminLoginBtn').style.display = isAdmin ? 'none' : 'inline-block';
-    document.getElementById('adminLogoutBtn').style.display = isAdmin ? 'inline-block' : 'none';
-    fetchBooks();
-  }
-
-  function addCommentaryRow(name, author) {
-    name = name || '';
-    author = author || '';
-    const container = document.getElementById('commentaryContainer');
-    const div = document.createElement('div');
-    div.className = 'commentary-row';
-    div.innerHTML = '<input type="text" class="comm-name" placeholder="Commentary Title" value="' + name + '">' +
-                    '<input type="text" class="comm-author" placeholder="Author of Commentary" value="' + author + '">' +
-                    '<button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>';
-    container.appendChild(div);
-  }
-
-  function getLinkedCommentaries() {
-    const names = document.querySelectorAll('.comm-name');
-    const authors = document.querySelectorAll('.comm-author');
-    let result = [];
-    names.forEach((elem, idx) => {
-      const commName = elem.value.trim();
-      const commAuthor = authors[idx].value.trim();
-      if (commName || commAuthor) {
-        result.push((commName || 'Untitled') + ' (Author: ' + (commAuthor || 'Unknown') + ')');
-      }
-    });
-    return result.join(' | ');
-  }
-
-  function fetchBooks() {
-    const loading = document.getElementById('loadingIndicator');
-    const table = document.getElementById('booksTable');
-    loading.style.display = 'block';
-    table.style.display = 'none';
-
-    fetch(SCRIPT_URL)
-      .then(res => res.json())
-      .then(data => {
-        globalData = data;
-        const head = document.getElementById('tableHead');
-        const body = document.getElementById('tableBody');
-
-        if (data && data.length > 0) {
-          let headHtml = '';
-          data[0].forEach(col => { headHtml += '<th>' + col + '</th>'; });
-          if (adminToken) { headHtml += '<th>Actions</th>'; }
-          head.innerHTML = headHtml;
-
-          let bodyHtml = '';
-          for (let i = 1; i < data.length; i++) {
-            bodyHtml += '<tr>';
-            data[i].forEach(cell => {
-              bodyHtml += '<td>' + (cell !== undefined ? cell : '') + '</td>';
-            });
-
-            if (adminToken) {
-              bodyHtml += '<td>' +
-                '<button class="btn-edit" onclick="editBook(' + i + ')">Edit</button>' +
-                '<button class="btn-delete" onclick="deleteBook(' + (i + 1) + ')">Delete</button>' +
-              '</td>';
-            }
-            bodyHtml += '</tr>';
-          }
-          body.innerHTML = bodyHtml;
-        }
-
-        loading.style.display = 'none';
-        table.style.display = 'table';
-      })
-      .catch(err => {
-        loading.innerText = "⚠️ Failed to load catalog. Refresh page.";
-        console.error("Error fetching books:", err);
-      });
-  }
-
-  /* --- ISBN AUTO-METADATA LOOKUP (Open Library API) --- */
-  function fetchMetadataByISBN(isbnRaw) {
-    const isbn = isbnRaw.replace(/[^0-9X]/gi, '');
-    if (!isbn || (isbn.length !== 10 && isbn.length !== 13)) return;
-
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.innerText = "⏳ Fetching Book Details from Open Library...";
-
-    fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`)
-      .then(res => res.json())
-      .then(data => {
-        const bookKey = `ISBN:${isbn}`;
-        if (data && data[bookKey]) {
-          const book = data[bookKey];
-          if (!document.getElementById('title').value) document.getElementById('title').value = book.title || '';
-          if (!document.getElementById('author').value && book.authors) {
-            document.getElementById('author').value = book.authors.map(a => a.name).join(', ');
-          }
-          if (!document.getElementById('publisher').value && book.publishers) {
-            document.getElementById('publisher').value = book.publishers.map(p => p.name).join(', ');
-          }
-          if (!document.getElementById('year').value && book.publish_date) {
-            document.getElementById('year').value = book.publish_date;
-          }
-          if (!document.getElementById('subTitle').value && book.subtitle) {
-            document.getElementById('subTitle').value = book.subtitle;
-          }
-        }
-      })
-      .catch(err => console.warn("ISBN Fetch error:", err))
-      .finally(() => {
-        const editRowIndex = document.getElementById('editRowIndex').value;
-        submitBtn.innerText = editRowIndex ? 'Update Book Info' : 'Add Book to Library';
-      });
-  }
-
-  /* --- HYBRID BARCODE SCANNER ENGINE (Native + Strict Fallback) --- */
-  function openBarcodeScanner() {
-    document.getElementById('scannerModal').style.display = 'flex';
-    document.getElementById('scannerStatus').innerText = "Starting camera...";
-
-    if ('BarcodeDetector' in window) {
-      startNativeScanner();
-    } else {
-      startStrictQuaggaScanner();
-    }
-  }
-
-  function handleSuccessfulScan(rawCode) {
-    const code = rawCode.trim();
-    // Validate EAN-13 ISBN prefixes (978 / 979) or valid 10-digit ISBN
-    if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
-      document.getElementById('isbn').value = code;
-      fetchMetadataByISBN(code);
-      closeBarcodeScanner();
-    } else if (code.length === 10) {
-      document.getElementById('isbn').value = code;
-      fetchMetadataByISBN(code);
-      closeBarcodeScanner();
-    } else {
-      document.getElementById('scannerStatus').innerText = `⚠️ Scanned non-ISBN barcode (${code}). Try again.`;
-    }
-  }
-
-  /* 1. NATIVE BROWSER DETECTOR (Chrome/Edge/Android) */
-  async function startNativeScanner() {
-    document.getElementById('nativeVideoWrapper').style.display = 'block';
-    document.getElementById('interactive').style.display = 'none';
-    const video = document.getElementById('nativeVideo');
-
-    try {
-      nativeStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-      });
-      video.srcObject = nativeStream;
-
-      const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] });
-      document.getElementById('scannerStatus').innerText = "Native Detector Ready. Align barcode...";
-
-      nativeScanInterval = setInterval(async () => {
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          try {
-            const barcodes = await barcodeDetector.detect(video);
-            if (barcodes.length > 0) {
-              handleSuccessfulScan(barcodes[0].rawValue);
-            }
-          } catch (e) { console.error(e); }
-        }
-      }, 200);
-
-    } catch (err) {
-      console.warn("Native camera failed, falling back to engine:", err);
-      startStrictQuaggaScanner();
-    }
-  }
-
-  /* 2. STRICT QUAGGA FALLBACK ENGINE (Safari / Firefox) */
-  function startStrictQuaggaScanner() {
-    document.getElementById('nativeVideoWrapper').style.display = 'none';
-    document.getElementById('interactive').style.display = 'block';
-    document.getElementById('scannerStatus').innerText = "Align ISBN Barcode inside window...";
-
-    Quagga.init({
-      inputStream: {
-        name: "Live",
-        type: "LiveStream",
-        target: document.querySelector('#interactive'),
-        constraints: { facingMode: "environment", focusMode: "continuous" }
-      },
-      // Restrict strictly to EAN-13 to prevent misreads
-      decoder: { readers: ["ean_reader"], multiple: false },
-      locate: true
-    }, function(err) {
-      if (err) {
-        alert("Camera permission denied or unavailable.");
-        closeBarcodeScanner();
-        return;
-      }
-      Quagga.start();
-    });
-
-    let lastCode = "";
-    let matchCount = 0;
-
-    Quagga.onDetected(function(result) {
-      if (result && result.codeResult && result.codeResult.code) {
-        const code = result.codeResult.code;
-
-        // Verify checked length and ISBN prefixes
-        if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
-          if (code === lastCode) {
-            matchCount++;
-          } else {
-            lastCode = code;
-            matchCount = 1;
-          }
-
-          // Require 3 consecutive identical reads to guarantee 100% accuracy
-          if (matchCount >= 3) {
-            handleSuccessfulScan(code);
-          }
-        }
-      }
-    });
-  }
-
-  function closeBarcodeScanner() {
-    if (nativeScanInterval) clearInterval(nativeScanInterval);
-    if (nativeStream) {
-      nativeStream.getTracks().forEach(track => track.stop());
-      nativeStream = null;
-    }
-    try { Quagga.stop(); } catch(e){}
-
-    document.getElementById('scannerModal').style.display = 'none';
-    document.getElementById('nativeVideoWrapper').style.display = 'none';
-    document.getElementById('interactive').style.display = 'none';
-  }
-
-  /* --- EXPORT CSV --- */
-  function exportToCSV() {
-    if (!globalData || globalData.length === 0) {
-      alert("No data to export.");
-      return;
-    }
-    let csvContent = "data:text/csv;charset=utf-8,";
-    globalData.forEach(row => {
-      const escapedRow = row.map(cell => `"${(cell !== undefined ? cell : '').toString().replace(/"/g, '""')}"`);
-      csvContent += escapedRow.join(",") + "\r\n";
-    });
-    
-    const encodedUri = encodeURI(csvContent);
-    const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Library_Catalog_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-
-  /* --- AUTOCOMPLETE ENGINE --- */
-  function setupGlobalAutocomplete() {
-    document.querySelectorAll('input[data-autocomplete="true"]').forEach(input => {
-      input.addEventListener('input', function() { handleFieldInput(this); });
-      input.addEventListener('keydown', function(e) { handleFieldKeyDown(e, this); });
-    });
-  }
-
-  function handleFieldInput(inputElem) {
-    const wrapper = inputElem.closest('.autocomplete-wrapper');
-    const box = wrapper.querySelector('.suggestions-box');
-    const query = inputElem.value.trim().toLowerCase();
-    const targetCol = parseInt(inputElem.dataset.col);
-    selectedIndex = -1;
-
-    closeAllSuggestions();
-
-    if (!query || !globalData || globalData.length <= 1) return;
-
-    const matches = new Set();
-    for (let i = 1; i < globalData.length; i++) {
-      const fieldValue = String(globalData[i][targetCol] || '').trim();
-      if (fieldValue && fieldValue.toLowerCase().includes(query)) {
-        matches.add(fieldValue);
-        if (matches.size >= 8) break;
-      }
-    }
-
-    if (matches.size === 0) return;
-
-    box.innerHTML = '';
-    matches.forEach(value => {
-      const item = document.createElement('div');
-      item.className = 'suggestion-item';
-      item.innerHTML = `<strong>${value}</strong>`;
-      item.dataset.value = value;
-
-      item.onmousedown = function(e) {
-        e.preventDefault();
-        inputElem.value = value;
-        closeAllSuggestions();
-      };
-      box.appendChild(item);
-    });
-
-    box.style.display = 'block';
-  }
-
-  function handleFieldKeyDown(e, inputElem) {
-    const wrapper = inputElem.closest('.autocomplete-wrapper');
-    const box = wrapper.querySelector('.suggestions-box');
-    const items = box.querySelectorAll('.suggestion-item');
-
-    if (box.style.display === 'none' || items.length === 0) return;
-
-    if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      selectedIndex = (selectedIndex + 1) % items.length;
-      updateActiveItem(items);
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      selectedIndex = (selectedIndex - 1 + items.length) % items.length;
-      updateActiveItem(items);
-    } else if (e.key === 'Enter') {
-      if (selectedIndex >= 0 && selectedIndex < items.length) {
-        e.preventDefault();
-        inputElem.value = items[selectedIndex].dataset.value;
-        closeAllSuggestions();
-      }
-    } else if (e.key === 'Escape') {
-      closeAllSuggestions();
-    }
-  }
-
-  function updateActiveItem(items) {
-    items.forEach((item, idx) => {
-      if (idx === selectedIndex) {
-        item.classList.add('active');
-        item.scrollIntoView({ block: 'nearest' });
-      } else {
-        item.classList.remove('active');
-      }
-    });
-  }
-
-  function closeAllSuggestions() {
-    document.querySelectorAll('.suggestions-box').forEach(box => { box.style.display = 'none'; });
-    selectedIndex = -1;
-  }
-
-  function populateFormFields(row) {
-    document.getElementById('title').value = row[1] || '';
-    document.getElementById('titleEng').value = row[2] || '';
-    document.getElementById('subTitle').value = row[3] || '';
-    document.getElementById('author').value = row[4] || '';
-    document.getElementById('editor').value = row[5] || '';
-
-    document.getElementById('commentaryContainer').innerHTML = '';
-    const commString = row[6] || '';
-    if (commString) {
-      const pairs = commString.split(' | ');
-      pairs.forEach(pair => {
-        const match = pair.match(/(.*) \(Author: (.*)\)/);
-        if (match) {
-          addCommentaryRow(match[1], match[2]);
-        } else {
-          addCommentaryRow(pair, '');
-        }
-      });
-    } else {
       addCommentaryRow();
-    }
-
-    document.getElementById('lang').value = row[7] || '';
-    document.getElementById('vol').value = row[8] || '';
-    document.getElementById('publisher').value = row[9] || '';
-    document.getElementById('year').value = row[10] || '';
-    document.getElementById('isbn').value = row[11] || '';
-    document.getElementById('topic').value = row[12] || '';
-    document.getElementById('subject').value = row[13] || '';
-    document.getElementById('condition').value = row[14] || '';
-  }
-
-  document.addEventListener('click', function(e) {
-    if (!e.target.closest('.autocomplete-wrapper')) closeAllSuggestions();
-  });
-
-  document.getElementById('addBookForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    if (isSubmitting) return false;
-
-    const editRowIndex = document.getElementById('editRowIndex').value;
-    if (editRowIndex && !adminToken) {
-      alert("Only administrators can edit entries.");
-      return;
-    }
-
-    isSubmitting = true;
-    const submitBtn = document.getElementById('submitBtn');
-    const originalText = submitBtn.innerText;
-
-    submitBtn.disabled = true;
-    submitBtn.innerText = editRowIndex ? "⏳ Updating..." : "⏳ Saving...";
-
-    const formData = {
-      slNo: document.getElementById('slNo').value,
-      title: document.getElementById('title').value,
-      titleEng: document.getElementById('titleEng').value,
-      subTitle: document.getElementById('subTitle').value,
-      author: document.getElementById('author').value,
-      editor: document.getElementById('editor').value,
-      commentariesLinked: getLinkedCommentaries(),
-      lang: document.getElementById('lang').value,
-      vol: document.getElementById('vol').value,
-      publisher: document.getElementById('publisher').value,
-      year: document.getElementById('year').value,
-      isbn: document.getElementById('isbn').value,
-      topic: document.getElementById('topic').value,
-      subject: document.getElementById('subject').value,
-      condition: document.getElementById('condition').value
+      fetchBooks();
+      setupGlobalAutocomplete();
+      
+      document.querySelectorAll('input[type="text"]').forEach(input => {
+        input.addEventListener('focus', function() { lastActiveInput = this; });
+      });
     };
 
-    const payload = {
-      action: editRowIndex ? "update" : "add",
-      adminToken: adminToken,
-      rowIndex: editRowIndex ? parseInt(editRowIndex) + 1 : null,
-      data: formData
-    };
-
-    fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
-    .then(res => res.json())
-    .then(res => {
-      if (res.success) {
-        alert(editRowIndex ? 'Book updated!' : 'Book added!');
-        resetForm();
-        fetchBooks();
-      } else {
-        alert("Error: " + res.message);
+    function insertChar(char) {
+      if (!lastActiveInput) {
+        lastActiveInput = document.getElementById('title');
       }
-    })
-    .catch(err => alert("Submission failed: " + err))
-    .finally(() => {
-      isSubmitting = false;
-      submitBtn.disabled = false;
-      submitBtn.innerText = originalText;
-    });
-  });
+      const start = lastActiveInput.selectionStart;
+      const end = lastActiveInput.selectionEnd;
+      const val = lastActiveInput.value;
+      lastActiveInput.value = val.substring(0, start) + char + val.substring(end);
+      lastActiveInput.focus();
+      lastActiveInput.selectionStart = lastActiveInput.selectionEnd = start + char.length;
+    }
 
-  function editBook(index) {
-    if (!adminToken) { alert("Unauthorized."); return; }
-    const row = globalData[index];
-    document.getElementById('editRowIndex').value = index;
-    document.getElementById('slNo').value = row[0] || '';
-    
-    populateFormFields(row);
+    function toggleAdminLogin() {
+      const pwd = prompt("Enter Admin Password:");
+      if (!pwd) return;
 
-    document.getElementById('formTitle').innerText = 'Edit Book Information (Admin)';
-    document.getElementById('submitBtn').innerText = 'Update Book Info';
-    document.getElementById('cancelBtn').style.display = 'inline-block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }
-
-  function resetForm() {
-    document.getElementById('addBookForm').reset();
-    document.getElementById('editRowIndex').value = '';
-    document.getElementById('slNo').value = '';
-    document.getElementById('commentaryContainer').innerHTML = '';
-    addCommentaryRow();
-    document.getElementById('formTitle').innerText = 'Add New Book Entry';
-    document.getElementById('submitBtn').innerText = 'Add Book to Library';
-    document.getElementById('cancelBtn').style.display = 'none';
-  }
-
-  function deleteBook(rowIndex) {
-    if (!adminToken) { alert("Unauthorized."); return; }
-    if (confirm('Delete this book entry?')) {
       fetch(SCRIPT_URL, {
         method: 'POST',
-        body: JSON.stringify({ action: 'delete', adminToken: adminToken, rowIndex: rowIndex })
+        body: JSON.stringify({ action: 'login', password: pwd })
       })
       .then(res => res.json())
       .then(res => {
         if (res.success) {
-          alert('Book deleted!');
-          fetchBooks();
+          adminToken = res.token;
+          sessionStorage.setItem('adminToken', adminToken);
+          alert("Admin mode activated!");
+          updateAdminUI(true);
         } else {
-          alert('Error: ' + res.message);
+          alert("Incorrect Password!");
         }
       })
-      .catch(err => alert("Delete failed: " + err));
+      .catch(err => alert("Connection error: " + err));
     }
-  }
 
-  function searchBooks() {
-    const input = document.getElementById('searchBox').value.toLowerCase();
-    const rows = document.getElementById('tableBody').getElementsByTagName('tr');
-    for (let i = 0; i < rows.length; i++) {
-      const text = rows[i].textContent.toLowerCase();
-      rows[i].style.display = text.includes(input) ? '' : 'none';
+    function logoutAdmin() {
+      adminToken = null;
+      sessionStorage.removeItem('adminToken');
+      alert("Logged out of Admin mode.");
+      updateAdminUI(false);
+      resetForm();
     }
-  }
-</script>
+
+    function updateAdminUI(isAdmin) {
+      document.getElementById('roleBadge').innerText = isAdmin ? 'Role: Administrator' : 'Role: Standard User';
+      document.getElementById('adminLoginBtn').style.display = isAdmin ? 'none' : 'inline-block';
+      document.getElementById('adminLogoutBtn').style.display = isAdmin ? 'inline-block' : 'none';
+      
+      if (globalData && globalData.length > 0) {
+        renderTableData(globalData);
+      }
+    }
+
+    function addCommentaryRow(name, author) {
+      name = name || '';
+      author = author || '';
+      const container = document.getElementById('commentaryContainer');
+      const div = document.createElement('div');
+      div.className = 'commentary-row';
+      div.innerHTML = '<input type="text" class="comm-name" placeholder="Commentary Title" value="' + name + '">' +
+                      '<input type="text" class="comm-author" placeholder="Author of Commentary" value="' + author + '">' +
+                      '<button type="button" class="btn-remove" onclick="this.parentElement.remove()">✕</button>';
+      container.appendChild(div);
+    }
+
+    function getLinkedCommentaries() {
+      const names = document.querySelectorAll('.comm-name');
+      const authors = document.querySelectorAll('.comm-author');
+      let result = [];
+      names.forEach((elem, idx) => {
+        const commName = elem.value.trim();
+        const commAuthor = authors[idx].value.trim();
+        if (commName || commAuthor) {
+          result.push((commName || 'Untitled') + ' (Author: ' + (commAuthor || 'Unknown') + ')');
+        }
+      });
+      return result.join(' | ');
+    }
+
+    function fetchBooks() {
+      const loading = document.getElementById('loadingIndicator');
+      const table = document.getElementById('booksTable');
+      loading.style.display = 'block';
+      table.style.display = 'none';
+
+      fetch(SCRIPT_URL)
+        .then(res => res.json())
+        .then(data => {
+          globalData = data;
+          renderTableData(data);
+          loading.style.display = 'none';
+          table.style.display = 'table';
+        })
+        .catch(err => {
+          loading.innerText = "⚠️ Failed to load catalog. Refresh page.";
+          console.error("Error fetching books:", err);
+        });
+    }
+
+    function renderTableData(data) {
+      const head = document.getElementById('tableHead');
+      const body = document.getElementById('tableBody');
+
+      if (data && data.length > 0) {
+        let headHtml = '';
+        data[0].forEach(col => { headHtml += '<th>' + col + '</th>'; });
+        if (adminToken) { headHtml += '<th>Actions</th>'; }
+        head.innerHTML = headHtml;
+
+        let bodyHtml = '';
+        for (let i = 1; i < data.length; i++) {
+          bodyHtml += '<tr>';
+          data[i].forEach(cell => {
+            bodyHtml += '<td>' + (cell !== undefined ? cell : '') + '</td>';
+          });
+
+          if (adminToken) {
+            bodyHtml += '<td>' +
+              '<button class="btn-edit" onclick="editBook(' + i + ')">Edit</button>' +
+              '<button class="btn-delete" onclick="deleteBook(' + (i + 1) + ')">Delete</button>' +
+            '</td>';
+          }
+          bodyHtml += '</tr>';
+        }
+        body.innerHTML = bodyHtml;
+        populateFilterDropdowns();
+        calculateDailyProgress();
+      }
+    }
+
+    function calculateDailyProgress() {
+      const todayStr = new Date().toISOString().slice(0, 10);
+      const userCounts = {};
+
+      for (let i = 1; i < globalData.length; i++) {
+        const user = globalData[i][15] || 'Anonymous';
+        const timestamp = globalData[i][16];
+
+        if (timestamp) {
+          const entryDate = new Date(timestamp).toISOString().slice(0, 10);
+          if (entryDate === todayStr) {
+            userCounts[user] = (userCounts[user] || 0) + 1;
+          }
+        }
+      }
+
+      const statsContainer = document.getElementById('progressStats');
+      statsContainer.innerHTML = '';
+
+      const users = Object.keys(userCounts);
+      if (users.length === 0) {
+        statsContainer.innerHTML = '<div style="color: #6c757d; font-style: italic;">No entries completed yet today.</div>';
+        return;
+      }
+
+      users.forEach(user => {
+        const count = userCounts[user];
+        const percent = Math.min(Math.round((count / DAILY_QUOTA_PER_USER) * 100), 100);
+        
+        const div = document.createElement('div');
+        div.className = 'stat-card';
+        div.innerHTML = `
+          <div class="user-name">👤 ${user}</div>
+          <div class="count">${count} <span style="font-size: 14px; font-weight: normal; color: #555;">entries</span></div>
+          <div class="quota">Daily Goal: ${DAILY_QUOTA_PER_USER} entries (${percent}% completed)</div>
+        `;
+        statsContainer.appendChild(div);
+      });
+    }
+
+    function populateFilterDropdowns() {
+      const languages = new Set();
+      const topics = new Set();
+
+      for (let i = 1; i < globalData.length; i++) {
+        if (globalData[i][7]) languages.add(globalData[i][7].trim());
+        if (globalData[i][12]) topics.add(globalData[i][12].trim());
+      }
+
+      const langSelect = document.getElementById('filterLang');
+      langSelect.innerHTML = '<option value="">All Languages</option>';
+      languages.forEach(l => { if(l) langSelect.innerHTML += `<option value="${l}">${l}</option>`; });
+
+      const topicSelect = document.getElementById('filterTopic');
+      topicSelect.innerHTML = '<option value="">All Topics</option>';
+      topics.forEach(t => { if(t) topicSelect.innerHTML += `<option value="${t}">${t}</option>`; });
+    }
+
+    function checkAndFetchISBN(isbnRaw) {
+      const cleanIsbn = isbnRaw.replace(/[^0-9X]/gi, '');
+      if (!cleanIsbn) return;
+
+      for (let i = 1; i < globalData.length; i++) {
+        const existingIsbn = String(globalData[i][11] || '').replace(/[^0-9X]/gi, '');
+        if (existingIsbn && existingIsbn === cleanIsbn) {
+          alert(`⚠️ Book already exists in catalog!\nTitle: ${globalData[i][1]}\nSl. No: ${globalData[i][0]}`);
+          break;
+        }
+      }
+
+      fetchMetadataByISBN(cleanIsbn);
+    }
+
+    function fetchMetadataByISBN(isbn) {
+      if (isbn.length !== 10 && isbn.length !== 13) return;
+
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.innerText = "⏳ Fetching Book Details from Open Library...";
+
+      fetch(`https://openlibrary.org/api/books?bibkeys=ISBN:${isbn}&format=json&jscmd=data`)
+        .then(res => res.json())
+        .then(data => {
+          const bookKey = `ISBN:${isbn}`;
+          if (data && data[bookKey]) {
+            const book = data[bookKey];
+            if (!document.getElementById('title').value) document.getElementById('title').value = book.title || '';
+            if (!document.getElementById('author').value && book.authors) {
+              document.getElementById('author').value = book.authors.map(a => a.name).join(', ');
+            }
+            if (!document.getElementById('publisher').value && book.publishers) {
+              document.getElementById('publisher').value = book.publishers.map(p => p.name).join(', ');
+            }
+            if (!document.getElementById('year').value && book.publish_date) {
+              document.getElementById('year').value = book.publish_date;
+            }
+            if (!document.getElementById('subTitle').value && book.subtitle) {
+              document.getElementById('subTitle').value = book.subtitle;
+            }
+          }
+        })
+        .catch(err => console.warn("ISBN Fetch error:", err))
+        .finally(() => {
+          const editRowIndex = document.getElementById('editRowIndex').value;
+          submitBtn.innerText = editRowIndex ? 'Update Book Info' : 'Add Book to Library';
+        });
+    }
+
+    function openBarcodeScanner() {
+      document.getElementById('scannerModal').style.display = 'flex';
+      document.getElementById('scannerStatus').innerText = "Starting camera...";
+
+      if ('BarcodeDetector' in window) {
+        startNativeScanner();
+      } else {
+        startStrictQuaggaScanner();
+      }
+    }
+
+    function handleSuccessfulScan(rawCode) {
+      const code = rawCode.trim();
+      if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
+        document.getElementById('isbn').value = code;
+        checkAndFetchISBN(code);
+        closeBarcodeScanner();
+      } else if (code.length === 10) {
+        document.getElementById('isbn').value = code;
+        checkAndFetchISBN(code);
+        closeBarcodeScanner();
+      } else {
+        document.getElementById('scannerStatus').innerText = `⚠️ Scanned barcode (${code}) is not a valid ISBN. Retrying...`;
+      }
+    }
+
+    async function startNativeScanner() {
+      document.getElementById('nativeVideoWrapper').style.display = 'block';
+      document.getElementById('interactive').style.display = 'none';
+      const video = document.getElementById('nativeVideo');
+
+      try {
+        nativeStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        video.srcObject = nativeStream;
+
+        const barcodeDetector = new BarcodeDetector({ formats: ['ean_13', 'ean_8'] });
+        document.getElementById('scannerStatus').innerText = "Camera Active. Align barcode inside box...";
+
+        nativeScanInterval = setInterval(async () => {
+          if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            try {
+              const barcodes = await barcodeDetector.detect(video);
+              if (barcodes.length > 0) {
+                handleSuccessfulScan(barcodes[0].rawValue);
+              }
+            } catch (e) { console.error(e); }
+          }
+        }, 200);
+
+      } catch (err) {
+        startStrictQuaggaScanner();
+      }
+    }
+
+    function startStrictQuaggaScanner() {
+      document.getElementById('nativeVideoWrapper').style.display = 'none';
+      document.getElementById('interactive').style.display = 'block';
+      document.getElementById('scannerStatus').innerText = "Align ISBN Barcode inside window...";
+
+      Quagga.init({
+        inputStream: {
+          name: "Live",
+          type: "LiveStream",
+          target: document.querySelector('#interactive'),
+          constraints: { facingMode: "environment", focusMode: "continuous" }
+        },
+        decoder: { readers: ["ean_reader"], multiple: false },
+        locate: true
+      }, function(err) {
+        if (err) {
+          alert("Camera permission denied or unavailable.");
+          closeBarcodeScanner();
+          return;
+        }
+        Quagga.start();
+      });
+
+      let lastCode = "";
+      let matchCount = 0;
+
+      Quagga.onDetected(function(result) {
+        if (result && result.codeResult && result.codeResult.code) {
+          const code = result.codeResult.code;
+          if ((code.startsWith("978") || code.startsWith("979")) && code.length === 13) {
+            if (code === lastCode) {
+              matchCount++;
+            } else {
+              lastCode = code;
+              matchCount = 1;
+            }
+            if (matchCount >= 3) {
+              handleSuccessfulScan(code);
+            }
+          }
+        }
+      });
+    }
+
+    function closeBarcodeScanner() {
+      if (nativeScanInterval) clearInterval(nativeScanInterval);
+      if (nativeStream) {
+        nativeStream.getTracks().forEach(track => track.stop());
+        nativeStream = null;
+      }
+      try { Quagga.stop(); } catch(e){}
+
+      document.getElementById('scannerModal').style.display = 'none';
+      document.getElementById('nativeVideoWrapper').style.display = 'none';
+      document.getElementById('interactive').style.display = 'none';
+    }
+
+    function exportToCSV() {
+      if (!globalData || globalData.length === 0) {
+        alert("No data to export.");
+        return;
+      }
+      let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+      globalData.forEach(row => {
+        const escapedRow = row.map(cell => `"${(cell !== undefined ? cell : '').toString().replace(/"/g, '""')}"`);
+        csvContent += escapedRow.join(",") + "\r\n";
+      });
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `Library_Catalog_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    function setupGlobalAutocomplete() {
+      document.querySelectorAll('input[data-autocomplete="true"]').forEach(input => {
+        input.addEventListener('input', function() { handleFieldInput(this); });
+        input.addEventListener('keydown', function(e) { handleFieldKeyDown(e, this); });
+      });
+    }
+
+    function handleFieldInput(inputElem) {
+      const wrapper = inputElem.closest('.autocomplete-wrapper');
+      const box = wrapper.querySelector('.suggestions-box');
+      const query = inputElem.value.trim().toLowerCase();
+      const targetCol = parseInt(inputElem.dataset.col);
+      selectedIndex = -1;
+
+      closeAllSuggestions();
+
+      if (!query || !globalData || globalData.length <= 1) return;
+
+      const matches = new Set();
+      for (let i = 1; i < globalData.length; i++) {
+        const fieldValue = String(globalData[i][targetCol] || '').trim();
+        if (fieldValue && fieldValue.toLowerCase().includes(query)) {
+          matches.add(fieldValue);
+          if (matches.size >= 8) break;
+        }
+      }
+
+      if (matches.size === 0) return;
+
+      box.innerHTML = '';
+      matches.forEach(value => {
+        const item = document.createElement('div');
+        item.className = 'suggestion-item';
+        item.innerHTML = `<strong>${value}</strong>`;
+        item.dataset.value = value;
+
+        item.onmousedown = function(e) {
+          e.preventDefault();
+          inputElem.value = value;
+          closeAllSuggestions();
+        };
+        box.appendChild(item);
+      });
+
+      box.style.display = 'block';
+    }
+
+    function handleFieldKeyDown(e, inputElem) {
+      const wrapper = inputElem.closest('.autocomplete-wrapper');
+      const box = wrapper.querySelector('.suggestions-box');
+      const items = box.querySelectorAll('.suggestion-item');
+
+      if (box.style.display === 'none' || items.length === 0) return;
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex + 1) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+        updateActiveItem(items);
+      } else if (e.key === 'Enter') {
+        if (selectedIndex >= 0 && selectedIndex < items.length) {
+          e.preventDefault();
+          inputElem.value = items[selectedIndex].dataset.value;
+          closeAllSuggestions();
+        }
+      } else if (e.key === 'Escape') {
+        closeAllSuggestions();
+      }
+    }
+
+    function updateActiveItem(items) {
+      items.forEach((item, idx) => {
+        if (idx === selectedIndex) {
+          item.classList.add('active');
+          item.scrollIntoView({ block: 'nearest' });
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    function closeAllSuggestions() {
+      document.querySelectorAll('.suggestions-box').forEach(box => { box.style.display = 'none'; });
+      selectedIndex = -1;
+    }
+
+    function populateFormFields(row) {
+      document.getElementById('title').value = row[1] || '';
+      document.getElementById('titleEng').value = row[2] || '';
+      document.getElementById('subTitle').value = row[3] || '';
+      document.getElementById('author').value = row[4] || '';
+      document.getElementById('editor').value = row[5] || '';
+
+      document.getElementById('commentaryContainer').innerHTML = '';
+      const commString = row[6] || '';
+      if (commString) {
+        const pairs = commString.split(' | ');
+        pairs.forEach(pair => {
+          const match = pair.match(/(.*) \(Author: (.*)\)/);
+          if (match) {
+            addCommentaryRow(match[1], match[2]);
+          } else {
+            addCommentaryRow(pair, '');
+          }
+        });
+      } else {
+        addCommentaryRow();
+      }
+
+      document.getElementById('lang').value = row[7] || '';
+      document.getElementById('vol').value = row[8] || '';
+      document.getElementById('publisher').value = row[9] || '';
+      document.getElementById('year').value = row[10] || '';
+      document.getElementById('isbn').value = row[11] || '';
+      document.getElementById('topic').value = row[12] || '';
+      document.getElementById('subject').value = row[13] || '';
+      document.getElementById('condition').value = row[14] || '';
+      document.getElementById('createdBy').value = row[15] || '';
+    }
+
+    document.addEventListener('click', function(e) {
+      if (!e.target.closest('.autocomplete-wrapper')) closeAllSuggestions();
+    });
+
+    document.getElementById('addBookForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      if (isSubmitting) return false;
+
+      const userName = document.getElementById('createdBy').value.trim();
+      if (!userName) {
+        alert("Please enter your name in the 'Cataloguer Name' field.");
+        return;
+      }
+      localStorage.setItem('cataloguer_name', userName);
+
+      const editRowIndex = document.getElementById('editRowIndex').value;
+      if (editRowIndex && !adminToken) {
+        alert("Only administrators can edit entries.");
+        return;
+      }
+
+      isSubmitting = true;
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.innerText;
+
+      submitBtn.disabled = true;
+      submitBtn.innerText = editRowIndex ? "⏳ Updating..." : "⏳ Saving...";
+
+      const formData = {
+        slNo: document.getElementById('slNo').value,
+        title: document.getElementById('title').value,
+        titleEng: document.getElementById('titleEng').value,
+        subTitle: document.getElementById('subTitle').value,
+        author: document.getElementById('author').value,
+        editor: document.getElementById('editor').value,
+        commentariesLinked: getLinkedCommentaries(),
+        lang: document.getElementById('lang').value,
+        vol: document.getElementById('vol').value,
+        publisher: document.getElementById('publisher').value,
+        year: document.getElementById('year').value,
+        isbn: document.getElementById('isbn').value,
+        topic: document.getElementById('topic').value,
+        subject: document.getElementById('subject').value,
+        condition: document.getElementById('condition').value,
+        createdBy: userName
+      };
+
+      const payload = {
+        action: editRowIndex ? "update" : "add",
+        adminToken: adminToken,
+        rowIndex: editRowIndex ? parseInt(editRowIndex) + 1 : null,
+        data: formData
+      };
+
+      fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify(payload) })
+      .then(res => res.json())
+      .then(res => {
+        if (res.success) {
+          alert(editRowIndex ? 'Book updated successfully!' : 'Book added to catalog!');
+          resetForm();
+          fetchBooks();
+        } else {
+          alert("Error: " + res.message);
+        }
+      })
+      .catch(err => alert("Submission failed: " + err))
+      .finally(() => {
+        isSubmitting = false;
+        submitBtn.disabled = false;
+        submitBtn.innerText = originalText;
+      });
+    });
+
+    function editBook(index) {
+      if (!adminToken) { alert("Unauthorized."); return; }
+      const row = globalData[index];
+      document.getElementById('editRowIndex').value = index;
+      document.getElementById('slNo').value = row[0] || '';
+      
+      populateFormFields(row);
+
+      document.getElementById('formTitle').innerText = 'Edit Book Information (Admin)';
+      document.getElementById('submitBtn').innerText = 'Update Book Info';
+      document.getElementById('cancelBtn').style.display = 'inline-block';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function resetForm() {
+      document.getElementById('addBookForm').reset();
+      document.getElementById('editRowIndex').value = '';
+      document.getElementById('slNo').value = '';
+      document.getElementById('commentaryContainer').innerHTML = '';
+      
+      const savedUser = localStorage.getItem('cataloguer_name');
+      if (savedUser) document.getElementById('createdBy').value = savedUser;
+
+      addCommentaryRow();
+      document.getElementById('formTitle').innerText = 'Add New Book Entry';
+      document.getElementById('submitBtn').innerText = 'Add Book to Library';
+      document.getElementById('cancelBtn').style.display = 'none';
+    }
+
+    function deleteBook(rowIndex) {
+      if (!adminToken) { alert("Unauthorized."); return; }
+      if (confirm('Delete this book entry permanently?')) {
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          body: JSON.stringify({ action: 'delete', adminToken: adminToken, rowIndex: rowIndex })
+        })
+        .then(res => res.json())
+        .then(res => {
+          if (res.success) {
+            alert('Book deleted!');
+            fetchBooks();
+          } else {
+            alert('Error: ' + res.message);
+          }
+        })
+        .catch(err => alert("Delete failed: " + err));
+      }
+    }
+
+    function filterBooks() {
+      const searchVal = document.getElementById('searchBox').value.toLowerCase();
+      const selectedLang = document.getElementById('filterLang').value.toLowerCase();
+      const selectedTopic = document.getElementById('filterTopic').value.toLowerCase();
+      const selectedCond = document.getElementById('filterCond').value;
+
+      const rows = document.getElementById('tableBody').getElementsByTagName('tr');
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName('td');
+        if (cells.length === 0) continue;
+
+        const textMatch = !searchVal || row.textContent.toLowerCase().includes(searchVal);
+        const langMatch = !selectedLang || (cells[7] && cells[7].textContent.toLowerCase().trim() === selectedLang);
+        const topicMatch = !selectedTopic || (cells[12] && cells[12].textContent.toLowerCase().trim() === selectedTopic);
+        const condMatch = !selectedCond || (cells[14] && cells[14].textContent.trim() === selectedCond);
+
+        if (textMatch && langMatch && topicMatch && condMatch) {
+          row.style.display = '';
+        } else {
+          row.style.display = 'none';
+        }
+      }
+    }
+  </script>
 </body>
 </html>
