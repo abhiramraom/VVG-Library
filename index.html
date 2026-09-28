@@ -26,8 +26,6 @@
       padding: 15px 20px;
       border-radius: 8px;
       margin-bottom: 20px;
-      flex-wrap: wrap;
-      gap: 10px;
     }
     .header-bar h1 { margin: 0; font-size: 22px; }
     .badge {
@@ -35,7 +33,6 @@
       background: #34495e;
       padding: 5px 12px;
       border-radius: 12px;
-      margin-left: 8px;
     }
     
     .card {
@@ -102,6 +99,31 @@
     input:focus, select:focus {
       border-color: #3498db;
       box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.15);
+    }
+    
+    /* Virtual Diacritics Toolbar */
+    .diacritics-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      background: #edf2f7;
+      padding: 10px;
+      border-radius: 6px;
+      margin-bottom: 15px;
+    }
+    .diacritic-btn {
+      background: #fff;
+      border: 1px solid #cbd5e0;
+      border-radius: 4px;
+      padding: 5px 10px;
+      font-size: 15px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    .diacritic-btn:hover {
+      background: #3498db;
+      color: #fff;
+      border-color: #3498db;
     }
 
     /* Commentaries Rows */
@@ -230,13 +252,10 @@
   <!-- Header -->
   <div class="header-bar">
     <div>
-      <h1 style="display:inline-block;">📚 Library Cataloging Portal</h1>
+      <h1>📚 Library Cataloging Portal</h1>
       <span id="roleBadge" class="badge">Role: Standard User</span>
-      <span id="userBadge" class="badge" style="background:#27ae60; display:none;">Logged in as: -</span>
     </div>
-    <div style="display: flex; gap: 8px;">
-      <button id="userLoginBtn" class="btn btn-outline" onclick="loginUser()">Cataloguer Login</button>
-      <button id="userLogoutBtn" class="btn btn-outline" onclick="logoutUser()" style="display:none;">Change Cataloguer</button>
+    <div>
       <button id="adminLoginBtn" class="btn btn-outline" onclick="toggleAdminLogin()">Admin Login</button>
       <button id="adminLogoutBtn" class="btn btn-outline" onclick="logoutAdmin()" style="display:none;">Logout Admin</button>
     </div>
@@ -253,6 +272,27 @@
   <!-- Book Entry Form -->
   <div class="card">
     <div class="card-title" id="formTitle">Add New Book Entry</div>
+    
+    <!-- Virtual Character Inserter -->
+    <label>Quick Character Insert (Click to add at cursor position):</label>
+    <div class="diacritics-toolbar">
+      <button type="button" class="diacritic-btn" onclick="insertChar('ā')">ā</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ī')">ī</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ū')">ū</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṛ')">ṛ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṝ')">ṝ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ḷ')">ḷ</button>
+
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṅ')">ṅ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ñ')">ñ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṭ')">ṭ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ḍ')">ḍ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṇ')">ṇ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ś')">ś</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṣ')">ṣ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ṃ')">ṃ</button>
+      <button type="button" class="diacritic-btn" onclick="insertChar('ḥ')">ḥ</button>
+    </div>
 
     <form id="addBookForm">
       <input type="hidden" id="editRowIndex" value="">
@@ -329,16 +369,15 @@
           </div>
         </div>
 
-        <!-- Swapped e.g. values as requested -->
         <div class="form-group autocomplete-wrapper">
           <label for="topic">Topic / Category *</label>
-          <input type="text" id="topic" required data-autocomplete="true" data-col="12" placeholder="e.g. Advaita, Prasthanatrayi">
+          <input type="text" id="topic" required data-autocomplete="true" data-col="12" placeholder="e.g. Vedanta, Nyaya, Kavya">
           <div class="suggestions-box"></div>
         </div>
 
         <div class="form-group autocomplete-wrapper">
           <label for="subject">Subject Details</label>
-          <input type="text" id="subject" data-autocomplete="true" data-col="13" placeholder="e.g. Vedanta, Nyaya, Kavya">
+          <input type="text" id="subject" data-autocomplete="true" data-col="13" placeholder="e.g. Advaita, Prasthanatrayi">
           <div class="suggestions-box"></div>
         </div>
 
@@ -352,10 +391,9 @@
           </select>
         </div>
 
-        <!-- Logged in Cataloguer Field (Auto-filled once logged in) -->
         <div class="form-group autocomplete-wrapper">
           <label for="createdBy">Cataloguer Name *</label>
-          <input type="text" id="createdBy" required data-autocomplete="true" data-col="15" placeholder="Login or enter name">
+          <input type="text" id="createdBy" required data-autocomplete="true" data-col="15" placeholder="Your name">
           <div class="suggestions-box"></div>
         </div>
       </div>
@@ -417,29 +455,27 @@
   </div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbydUNQacZxE91f6IC6vuQlZsVGGUj8-mFdwuzU2Hpw1CRjFq7DNWZT2hWyIelmYErxU/exec';
-    const DAILY_QUOTA_PER_USER = 30;
+    // REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT WEB APP URL
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwTN6n6UTidikS-iGwimpngHqx5EE_J_6EGTTLFDi2SGSNcUiXJEFfhmRf4PcaVDqc/exec';
+    const DAILY_QUOTA_PER_USER = 30; // Daily entry target per cataloguer
 
     let adminToken = null;
-    let loggedInUser = null;
     let globalData = [];
     let selectedIndex = -1;
     let isSubmitting = false;
+    let lastActiveInput = null;
 
     let nativeStream = null;
     let nativeScanInterval = null;
 
     window.onload = function() {
-      // Restore logged-in user session
+      // 1. Restore saved cataloguer name
       const savedUser = localStorage.getItem('cataloguer_name');
       if (savedUser) {
-        setLoggedInUser(savedUser);
-      } else {
-        // Prompt user login on first load
-        loginUser();
+        document.getElementById('createdBy').value = savedUser;
       }
 
-      // Restore saved Admin Token across refreshes
+      // 2. Restore saved Admin Token across page refreshes
       const savedAdminToken = sessionStorage.getItem('adminToken');
       if (savedAdminToken) {
         adminToken = savedAdminToken;
@@ -451,48 +487,22 @@
       addCommentaryRow();
       fetchBooks();
       setupGlobalAutocomplete();
+      
+      document.querySelectorAll('input[type="text"]').forEach(input => {
+        input.addEventListener('focus', function() { lastActiveInput = this; });
+      });
     };
 
-    function loginUser() {
-      const name = prompt("Enter your Cataloguer Name to log in:", loggedInUser || "");
-      if (name && name.trim()) {
-        setLoggedInUser(name.trim());
+    function insertChar(char) {
+      if (!lastActiveInput) {
+        lastActiveInput = document.getElementById('title');
       }
-    }
-
-    function setLoggedInUser(name) {
-      loggedInUser = name;
-      localStorage.setItem('cataloguer_name', name);
-      
-      const createdByInput = document.getElementById('createdBy');
-      createdByInput.value = name;
-      createdByInput.readOnly = true;
-      createdByInput.style.backgroundColor = "#edf2f7";
-
-      const userBadge = document.getElementById('userBadge');
-      userBadge.innerText = `Logged in: ${name}`;
-      userBadge.style.display = 'inline-block';
-
-      document.getElementById('userLoginBtn').style.display = 'none';
-      document.getElementById('userLogoutBtn').style.display = 'inline-block';
-    }
-
-    function logoutUser() {
-      if (confirm("Switch cataloguer profile?")) {
-        localStorage.removeItem('cataloguer_name');
-        loggedInUser = null;
-        
-        const createdByInput = document.getElementById('createdBy');
-        createdByInput.value = "";
-        createdByInput.readOnly = false;
-        createdByInput.style.backgroundColor = "#fff";
-
-        document.getElementById('userBadge').style.display = 'none';
-        document.getElementById('userLoginBtn').style.display = 'inline-block';
-        document.getElementById('userLogoutBtn').style.display = 'none';
-
-        loginUser();
-      }
+      const start = lastActiveInput.selectionStart;
+      const end = lastActiveInput.selectionEnd;
+      const val = lastActiveInput.value;
+      lastActiveInput.value = val.substring(0, start) + char + val.substring(end);
+      lastActiveInput.focus();
+      lastActiveInput.selectionStart = lastActiveInput.selectionEnd = start + char.length;
     }
 
     function toggleAdminLogin() {
@@ -972,9 +982,7 @@
       document.getElementById('topic').value = row[12] || '';
       document.getElementById('subject').value = row[13] || '';
       document.getElementById('condition').value = row[14] || '';
-      if (!loggedInUser) {
-        document.getElementById('createdBy').value = row[15] || '';
-      }
+      document.getElementById('createdBy').value = row[15] || '';
     }
 
     document.addEventListener('click', function(e) {
@@ -987,9 +995,10 @@
 
       const userName = document.getElementById('createdBy').value.trim();
       if (!userName) {
-        alert("Please log in or enter your name in the 'Cataloguer Name' field.");
+        alert("Please enter your name in the 'Cataloguer Name' field.");
         return;
       }
+      localStorage.setItem('cataloguer_name', userName);
 
       const editRowIndex = document.getElementById('editRowIndex').value;
       if (editRowIndex && !adminToken) {
@@ -1069,9 +1078,8 @@
       document.getElementById('slNo').value = '';
       document.getElementById('commentaryContainer').innerHTML = '';
       
-      if (loggedInUser) {
-        document.getElementById('createdBy').value = loggedInUser;
-      }
+      const savedUser = localStorage.getItem('cataloguer_name');
+      if (savedUser) document.getElementById('createdBy').value = savedUser;
 
       addCommentaryRow();
       document.getElementById('formTitle').innerText = 'Add New Book Entry';
